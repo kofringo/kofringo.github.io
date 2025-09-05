@@ -15,6 +15,32 @@
         .container {
             max-width: 1200px;
         }
+        /* Custom modal styles for messages */
+        .message-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .message-content {
+            background-color: #1e1e1e;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        .message-content button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+        }
     </style>
 </head>
 <body class="p-0">
@@ -235,37 +261,77 @@
     <!-- Admin Console Section -->
     <div id="admin-console" class="container mx-auto p-4 hidden">
         <h2 class="text-2xl font-bold mb-4">Admin Console</h2>
-        <p class="text-gray-400 mb-6">Use this form to add a new novel to the database.</p>
-        <form id="add-novel-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
-            <div>
-                <label for="novel-title-input" class="block text-gray-400">Novel Title</label>
-                <input type="text" id="novel-title-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+        <div class="flex space-x-4 mb-6 border-b border-gray-700">
+            <button id="add-novel-tab" class="py-2 px-4 text-white border-b-2 border-transparent hover:border-blue-500">Add Novel</button>
+            <button id="add-chapter-tab" class="py-2 px-4 text-white border-b-2 border-transparent hover:border-blue-500">Add Chapter</button>
+        </div>
+
+        <!-- Add Novel Section -->
+        <div id="add-novel-section">
+            <p class="text-gray-400 mb-6">Use this form to add a new novel to the database.</p>
+            <form id="add-novel-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+                <div>
+                    <label for="novel-title-input" class="block text-gray-400">Novel Title</label>
+                    <input type="text" id="novel-title-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                </div>
+                <div>
+                    <label for="novel-author-input" class="block text-gray-400">Author</label>
+                    <input type="text" id="novel-author-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                </div>
+                <div>
+                    <label for="novel-cover-input" class="block text-gray-400">Cover Image URL</label>
+                    <input type="url" id="novel-cover-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                </div>
+                <div>
+                    <label for="novel-rating-input" class="block text-gray-400">Rating</label>
+                    <input type="number" id="novel-rating-input" step="0.1" min="0" max="5" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                </div>
+                <div>
+                    <label for="novel-genre-input" class="block text-gray-400">Genres (comma-separated)</label>
+                    <input type="text" id="novel-genre-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                </div>
+                <button type="submit" class="w-full bg-[#4B0082] text-white px-4 py-2 rounded-md hover:bg-[#5E1A9D] transition-colors duration-300">
+                    Add Novel
+                </button>
+            </form>
+        </div>
+        
+        <!-- Add Chapter Section -->
+        <div id="add-chapter-section" class="hidden">
+            <p class="text-gray-400 mb-6">Select a novel below to add a new chapter to it.</p>
+            <div id="admin-novels-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Novels will be injected here -->
             </div>
-            <div>
-                <label for="novel-author-input" class="block text-gray-400">Author</label>
-                <input type="text" id="novel-author-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            
+            <div id="add-chapter-form-container" class="mt-8 hidden">
+                <button id="back-to-admin-list" class="text-blue-400 hover:text-blue-500 transition duration-300 ease-in-out font-medium mt-4 mb-4">
+                    ← Back to Novel List
+                </button>
+                <h3 class="text-xl font-bold mb-4">Add Chapter to <span id="selected-novel-title" class="text-blue-400"></span></h3>
+                <form id="add-chapter-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+                    <input type="hidden" id="selected-novel-id">
+                    <div>
+                        <label for="chapter-title-input" class="block text-gray-400">Chapter Title</label>
+                        <input type="text" id="chapter-title-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+                    </div>
+                    <div>
+                        <label for="chapter-content-input" class="block text-gray-400">Chapter Content</label>
+                        <textarea id="chapter-content-input" rows="10" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-[#4B0082] text-white px-4 py-2 rounded-md hover:bg-[#5E1A9D] transition-colors duration-300">
+                        Add Chapter
+                    </button>
+                </form>
             </div>
-            <div>
-                <label for="novel-cover-input" class="block text-gray-400">Cover Image URL</label>
-                <input type="url" id="novel-cover-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
-            </div>
-            <div>
-                <label for="novel-rating-input" class="block text-gray-400">Rating</label>
-                <input type="number" id="novel-rating-input" step="0.1" min="0" max="5" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
-            </div>
-            <div>
-                <label for="novel-genre-input" class="block text-gray-400">Genres (comma-separated)</label>
-                <input type="text" id="novel-genre-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
-            </div>
-            <div>
-                <label for="novel-chapters-input" class="block text-gray-400">Chapters (JSON string)</label>
-                <textarea id="novel-chapters-input" rows="4" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2"></textarea>
-                <p class="text-xs text-gray-500 mt-1">Example: `[{"title": "Chapter 1", "content": "Story content goes here."}]`</p>
-            </div>
-            <button type="submit" class="w-full bg-[#4B0082] text-white px-4 py-2 rounded-md hover:bg-[#5E1A9D] transition-colors duration-300">
-                Add Novel
-            </button>
-        </form>
+        </div>
+    </div>
+    
+    <!-- Custom message box modal -->
+    <div id="message-modal" class="message-modal">
+        <div class="message-content">
+            <p id="message-text" class="text-lg"></p>
+            <button id="close-message" class="bg-blue-600 hover:bg-blue-700 text-white rounded-md">OK</button>
+        </div>
     </div>
 
     <script type="module">
@@ -298,6 +364,21 @@
         const adminConsole = document.getElementById('admin-console');
         const addNovelForm = document.getElementById('add-novel-form');
         
+        const addNovelSection = document.getElementById('add-novel-section');
+        const addChapterSection = document.getElementById('add-chapter-section');
+        const addNovelTab = document.getElementById('add-novel-tab');
+        const addChapterTab = document.getElementById('add-chapter-tab');
+        const adminNovelsList = document.getElementById('admin-novels-list');
+        const addChapterFormContainer = document.getElementById('add-chapter-form-container');
+        const addChapterForm = document.getElementById('add-chapter-form');
+        const selectedNovelTitle = document.getElementById('selected-novel-title');
+        const selectedNovelId = document.getElementById('selected-novel-id');
+        const backToAdminListBtn = document.getElementById('back-to-admin-list');
+
+        const messageModal = document.getElementById('message-modal');
+        const messageText = document.getElementById('message-text');
+        const closeMessageBtn = document.getElementById('close-message');
+        
         let allNovelsData = [];
         let chaptersCache = {};
         let currentNovelId = null;
@@ -319,9 +400,19 @@
                 genreView.classList.remove('hidden');
             } else if (page === 'admin') {
                 adminConsole.classList.remove('hidden');
+                addNovelTab.click(); // Default to "Add Novel" tab
             }
         }
         
+        function showMessageBox(message) {
+            messageText.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+        
+        closeMessageBtn.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+        });
+
         // --- Firebase Initialization and Authentication ---
         if (firebaseConfig) {
             app = initializeApp(firebaseConfig);
@@ -363,6 +454,7 @@
                 if (novelListView.classList.contains('hidden') === false) {
                     renderAllNovelCards();
                 }
+                renderAdminNovelsList();
             }, (error) => {
                 console.error("Error fetching novels:", error);
             });
@@ -394,6 +486,7 @@
                 const querySnapshot = await getDocs(q);
                 const chapters = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 // Sort chapters by some property if needed, e.g., 'chapterNumber'
+                chapters.sort((a, b) => (a.title.localeCompare(b.title)));
                 chaptersCache[novelId] = chapters;
                 return chapters;
             } catch (error) {
@@ -545,12 +638,38 @@
                 });
             }
         }
+        
+        function renderAdminNovelsList() {
+            adminNovelsList.innerHTML = '';
+            allNovelsData.forEach(novel => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex justify-between items-center';
+                card.innerHTML = `
+                    <h4 class="text-lg font-semibold truncate">${novel.title}</h4>
+                    <button class="add-chapter-btn bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition duration-300">
+                        Add Chapter
+                    </button>
+                `;
+                card.querySelector('.add-chapter-btn').addEventListener('click', () => {
+                    showAddChapterForm(novel);
+                });
+                adminNovelsList.appendChild(card);
+            });
+        }
+        
+        function showAddChapterForm(novel) {
+            adminNovelsList.classList.add('hidden');
+            addChapterFormContainer.classList.remove('hidden');
+            selectedNovelTitle.textContent = novel.title;
+            selectedNovelId.value = novel.id;
+        }
+
 
         // --- Event Listeners ---
         
         // Listen for "Admin" key press to show the admin console
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Admin' || e.key === 'admin') {
+            if (e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'admin') {
                 showPage('admin');
             }
         });
@@ -563,19 +682,6 @@
             const novelCover = document.getElementById('novel-cover-input').value;
             const novelRating = parseFloat(document.getElementById('novel-rating-input').value);
             const novelGenres = document.getElementById('novel-genre-input').value.split(',').map(g => g.trim());
-            const novelChapters = document.getElementById('novel-chapters-input').value;
-
-            let chaptersData;
-            try {
-                chaptersData = JSON.parse(novelChapters);
-                if (!Array.isArray(chaptersData)) {
-                    throw new Error("Chapters must be a JSON array.");
-                }
-            } catch (error) {
-                console.error("Invalid chapters JSON:", error);
-                // In a real app, you'd show a user-facing error message here
-                return;
-            }
 
             const novelData = {
                 title: novelTitle,
@@ -587,21 +693,66 @@
             
             try {
                 const novelsCollection = getNovelsCollectionRef();
-                const newNovelDocRef = await addDoc(novelsCollection, novelData);
-                console.log("Novel added with ID:", newNovelDocRef.id);
+                await addDoc(novelsCollection, novelData);
                 
-                // Add chapters as a subcollection
-                const chaptersCollection = collection(db, `artifacts/${appId}/public/data/novels/${newNovelDocRef.id}/chapters`);
-                for (const chapter of chaptersData) {
-                    await addDoc(chaptersCollection, chapter);
-                }
-                
-                // Reset form
+                showMessageBox("Novel added successfully!");
                 addNovelForm.reset();
-                showPage('home'); // Go back to the main view
             } catch (e) {
-                console.error("Error adding document: ", e);
+                console.error("Error adding novel: ", e);
+                showMessageBox("Failed to add novel. Please try again.");
             }
+        });
+
+        // Handle form submission to add a new chapter
+        addChapterForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const novelId = document.getElementById('selected-novel-id').value;
+            const chapterTitle = document.getElementById('chapter-title-input').value;
+            const chapterContent = document.getElementById('chapter-content-input').value;
+
+            const chapterData = {
+                title: chapterTitle,
+                content: chapterContent
+            };
+            
+            try {
+                const chaptersCollection = collection(db, `artifacts/${appId}/public/data/novels/${novelId}/chapters`);
+                await addDoc(chaptersCollection, chapterData);
+                
+                showMessageBox("Chapter added successfully!");
+                addChapterForm.reset();
+                
+                // Clear the chapter cache so the detail page re-fetches
+                delete chaptersCache[novelId];
+                
+                // Go back to the admin list after adding a chapter
+                addChapterFormContainer.classList.add('hidden');
+                adminNovelsList.classList.remove('hidden');
+            } catch (e) {
+                console.error("Error adding chapter: ", e);
+                showMessageBox("Failed to add chapter. Please try again.");
+            }
+        });
+        
+        // Tab navigation in Admin Console
+        addNovelTab.addEventListener('click', () => {
+            addNovelSection.classList.remove('hidden');
+            addChapterSection.classList.add('hidden');
+            addNovelTab.classList.add('border-blue-500');
+            addChapterTab.classList.remove('border-blue-500');
+        });
+        
+        addChapterTab.addEventListener('click', () => {
+            addChapterSection.classList.remove('hidden');
+            addNovelSection.classList.add('hidden');
+            addChapterTab.classList.add('border-blue-500');
+            addNovelTab.classList.remove('border-blue-500');
+            renderAdminNovelsList();
+        });
+        
+        backToAdminListBtn.addEventListener('click', () => {
+            addChapterFormContainer.classList.add('hidden');
+            adminNovelsList.classList.remove('hidden');
         });
         
         // Event listener for the novel list link
