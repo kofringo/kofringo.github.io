@@ -99,7 +99,7 @@
                     View More
                 </button>
             </div>
-            <div class="flex flex-nowrap overflow-x-auto space-x-6 pb-4">
+            <div id="popular-novels-container" class="flex flex-nowrap overflow-x-auto space-x-6 pb-4">
                 <!-- Novel cards will be injected here by JavaScript -->
             </div>
         </section>
@@ -231,449 +231,436 @@
             <!-- Chapter content injected here -->
         </div>
     </div>
+    
+    <!-- Admin Console Section -->
+    <div id="admin-console" class="container mx-auto p-4 hidden">
+        <h2 class="text-2xl font-bold mb-4">Admin Console</h2>
+        <p class="text-gray-400 mb-6">Use this form to add a new novel to the database.</p>
+        <form id="add-novel-form" class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+            <div>
+                <label for="novel-title-input" class="block text-gray-400">Novel Title</label>
+                <input type="text" id="novel-title-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            </div>
+            <div>
+                <label for="novel-author-input" class="block text-gray-400">Author</label>
+                <input type="text" id="novel-author-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            </div>
+            <div>
+                <label for="novel-cover-input" class="block text-gray-400">Cover Image URL</label>
+                <input type="url" id="novel-cover-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            </div>
+            <div>
+                <label for="novel-rating-input" class="block text-gray-400">Rating</label>
+                <input type="number" id="novel-rating-input" step="0.1" min="0" max="5" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            </div>
+            <div>
+                <label for="novel-genre-input" class="block text-gray-400">Genres (comma-separated)</label>
+                <input type="text" id="novel-genre-input" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2">
+            </div>
+            <div>
+                <label for="novel-chapters-input" class="block text-gray-400">Chapters (JSON string)</label>
+                <textarea id="novel-chapters-input" rows="4" required class="mt-1 block w-full rounded-md bg-gray-700 text-white border-gray-600 p-2"></textarea>
+                <p class="text-xs text-gray-500 mt-1">Example: `[{"title": "Chapter 1", "content": "Story content goes here."}]`</p>
+            </div>
+            <button type="submit" class="w-full bg-[#4B0082] text-white px-4 py-2 rounded-md hover:bg-[#5E1A9D] transition-colors duration-300">
+                Add Novel
+            </button>
+        </form>
+    </div>
 
-    <script>
-        // Use a self-contained IIFE (Immediately Invoked Function Expression)
-        (function() {
-            const allNovelsData = [
-                {
-                    "id": "shattered-innocence",
-                    "title": "Shattered Innocence",
-                    "author": "Jane Doe",
-                    "cover": "https://placehold.co/200x300/6A0DAD/ffffff?text=Shattered+Innocence",
-                    "rating": 4.2,
-                    "genre": ["Action", "Adventure"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 1: The Beginning",
-                            "content": "<p>Roland had a very mature and beautiful mother. His mother, in turn, had a group of equally mature and alluring girlfriends. Most of these girlfriends had daughters around Roland’s age. So…<br>Concerned that her son was nearing adulthood without ever having been in a relationship, his mother cast a “wicked” gaze upon her girlfriends. She planned a camping trip with the ultimate goal of finding her son a girlfriend. Roland, who had just spent the last three nights on a gaming binge, was forcefully shoved into the minivan.</p><p>The camping trip turned into a massive party, with mothers, girlfriends, and their beautiful daughters all competing to win Roland’s affection.<br>But Roland was not interested in any of them, as he had something far more powerful than love on his mind: The System.<br>After a quick bathroom break in the woods, Roland heard a faint beep from inside his head. “Scanning… Harem Ascension system detected. Loading system…<br>Loading successful. Welcome, host Roland.”</p>"
-                        },
-                        {
-                            "title": "Chapter 2: The Quest",
-                            "content": "<p>Roland’s eyes widened as a blue screen appeared in his vision, complete with buttons and icons that seemed to float in the air. The system’s voice was warm and inviting, but its words sent a shiver down his spine.<br>“To become the ultimate harem king, you must first complete the following quests. Quest 1: Gain the affections of a single woman. Quest 2: Gain the affections of three women.”<br>Roland couldn’t believe his luck. His mother had been trying to get him a girlfriend for years, and now he had a system that would help him do it. But this was no ordinary system. It was the Harem Ascension System, and its ultimate goal was to help him become the most powerful and desired man in the world. With this system, Roland was confident he would be able to conquer any woman he desired.</p>"
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, onSnapshot, doc, getDoc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    setLogLevel('debug');
+
+    // Global variables from Canvas environment
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let app, db, auth, userId;
+
+    // Use a self-contained IIFE (Immediately Invoked Function Expression)
+    (async function() {
+        const homeView = document.getElementById('home-view');
+        const novelListView = document.getElementById('novel-list-view');
+        const genreView = document.getElementById('genre-view');
+        const popularNovelsContainer = document.getElementById('popular-novels-container');
+        const recentChaptersContainer = document.getElementById('recent-chapters-grid');
+        const novelDetailView = document.getElementById('novel-detail-view');
+        const chapterView = document.getElementById('chapter-view');
+        const allNovelsGrid = document.getElementById('all-novels-grid');
+        const genreNovelsGrid = document.getElementById('genre-novels-grid');
+        const genreViewTitle = document.getElementById('genre-view-title');
+        const adminConsole = document.getElementById('admin-console');
+        const addNovelForm = document.getElementById('add-novel-form');
+        
+        let allNovelsData = [];
+        let chaptersCache = {};
+        let currentNovelId = null;
+
+        function showPage(page) {
+            homeView.classList.add('hidden');
+            novelListView.classList.add('hidden');
+            genreView.classList.add('hidden');
+            novelDetailView.classList.add('hidden');
+            chapterView.classList.add('hidden');
+            adminConsole.classList.add('hidden');
+
+            if (page === 'home') {
+                homeView.classList.remove('hidden');
+            } else if (page === 'novel-list') {
+                novelListView.classList.remove('hidden');
+                renderAllNovelCards();
+            } else if (page === 'genre') {
+                genreView.classList.remove('hidden');
+            } else if (page === 'admin') {
+                adminConsole.classList.remove('hidden');
+            }
+        }
+        
+        // --- Firebase Initialization and Authentication ---
+        if (firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("User signed in with UID:", userId);
+                    startFirestoreListeners();
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
                         }
-                    ]
-                },
-                {
-                    "id": "circle-of-inevitability",
-                    "title": "Circle of Inevitability",
-                    "author": "John Smith",
-                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Circle+of+Inevitability",
-                    "rating": 4.3,
-                    "genre": ["Fantasy", "Action"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 1: The Prophecy",
-                            "content": "<p>In a world where magic and mystery intertwined, a young mage named Elara was born with a unique destiny. The prophecies spoke of a great calamity, and she was the only one who could stop it. Her journey began in the ancient city of Veridian, where she sought to uncover the truth behind the Circle of Inevitability.</p>"
-                        },
-                        {
-                            "title": "Chapter 2: The Guardian",
-                            "content": "<p>Elara’s quest led her to a forbidden forest, where she encountered a fierce guardian. The guardian was a mystical creature with a heart of gold, and after a brief struggle, they became allies. Together, they continued their journey, facing new challenges and discovering ancient secrets.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "the-abyss",
-                    "title": "The Abyss",
-                    "author": "Jane Doe",
-                    "cover": "https://placehold.co/200x300/1E90FF/ffffff?text=The+Abyss",
-                    "rating": 5.0,
-                    "genre": ["Magic", "Adventure"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 1: The Descent",
-                            "content": "<p>The world's greatest adventurers knew of the Abyss, a chasm that led to an unknown dimension. It was said to be filled with unimaginable treasures and terrifying monsters. A young adventurer named Kael, driven by a desire for glory and wealth, decided to embark on a journey to the depths of the Abyss.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "another-world",
-                    "title": "Another World",
-                    "author": "John Smith",
-                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Another+World",
-                    "rating": 4.5,
-                    "genre": ["Fantasy", "System"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 1: The System",
-                            "content": "<p>Alex, a normal high school student, suddenly found himself in another world. A mysterious voice echoed in his head, telling him he had been chosen by the \"System\". With this system, he could level up, learn new skills, and become the most powerful being in this new world.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "douluo-karmas",
-                    "title": "Douluo: True and False Body of All Karmas",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/A020F0/ffffff?text=Douluo",
-                    "rating": 4.0,
-                    "genre": ["Fantasy", "Cultivation"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 153",
-                            "content": "<p>The latest chapter in the Douluo series continues the journey of the protagonist as he faces new challenges and unlocks ancient powers. He must confront his past and forge a new path to true mastery.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "after-fifteen-years",
-                    "title": "After fifteen years of cultivation, he finally reached the peak...",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/A020F0/ffffff?text=Cultivation",
-                    "rating": 4.5,
-                    "genre": ["Cultivation", "Action"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 169",
-                            "content": "<p>After a long and arduous journey of cultivation, the protagonist finally reaches the pinnacle of his power. He faces a final trial that will determine his destiny and shape the fate of the cultivation world.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "hunyuan-immortal",
-                    "title": "Hunyuan Immortal Sect",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/3CB371/ffffff?text=Hunyuan",
-                    "rating": 4.1,
-                    "genre": ["Fantasy", "Cultivation"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 340",
-                            "content": "<p>The battle for the Hunyuan Immortal Sect reaches its climax. The protagonist must use all of his cunning and power to outwit his enemies and protect the sect from destruction. The fate of the sect hangs in the balance.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "zongwu-mastermind",
-                    "title": "Zongwu: Aspiring to be the mastermind behind the world...",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/1E90FF/ffffff?text=Zongwu",
-                    "rating": 4.8,
-                    "genre": ["Strategy", "Fantasy"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 192",
-                            "content": "<p>The mastermind's plan unfolds as he manipulates events from behind the scenes. The latest chapter reveals a shocking twist that will change the course of the world and test the limits of his genius.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "infinite-terror",
-                    "title": "Infinite Terror: This Middle Continent is Rebellious",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/B22222/ffffff?text=Infinite",
-                    "rating": 4.3,
-                    "genre": ["Action", "Adventure"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 395",
-                            "content": "<p>The rebellion on the Middle Continent escalates as the protagonist leads his forces against a tyrannical empire. The latest chapter is a thrilling battle of wits and power, with a surprising turn of events.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "kamen-rider",
-                    "title": "Kamen Rider Senior Chat Group",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/A020F0/ffffff?text=Kamen",
-                    "rating": 4.7,
-                    "genre": ["Fantasy", "Comedy"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 301",
-                            "content": "<p>The senior chat group gets into another hilarious situation as they try to solve a new crisis. This chapter is full of witty banter and unexpected twists, a perfect blend of comedy and action.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "training-the-heavens",
-                    "title": "Training the Heavens",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/B22222/ffffff?text=Training",
-                    "rating": 4.9,
-                    "genre": ["Action", "Adventure"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 398",
-                            "content": "<p>The protagonist's training journey continues as he faces a formidable challenge from a powerful opponent. This chapter delves deep into the essence of cultivation and the true meaning of power.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "longevity-in-two-worlds",
-                    "title": "Longevity in Two Worlds: Double Pupils Are the Roa...",
-                    "author": "Unknown",
-                    "cover": "https://placehold.co/200x300/1E90FF/ffffff?text=Longevity",
-                    "rating": 4.6,
-                    "genre": ["Fantasy", "Adventure"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 219",
-                            "content": "<p>The protagonist's mysterious 'double pupils' are revealed to have a hidden power that could change the fate of both worlds. He must learn to control this new ability while navigating a treacherous path filled with enemies and allies.</p>"
-                        }
-                    ]
-                },
-                {
-                    "id": "the-cosmic-wanderer",
-                    "title": "The Cosmic Wanderer",
-                    "author": "A.I. Writer",
-                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Cosmic+Wanderer",
-                    "rating": 4.8,
-                    "genre": ["Science Fiction", "Adventure", "System"],
-                    "chapters": [
-                        {
-                            "title": "Chapter 1: The First Jump",
-                            "content": "<p>Zane, an orphan from a desolate planet, stumbles upon a sentient relic that grants him the ability to traverse the cosmos. With a system to guide his growth, he embarks on a journey to find his purpose among the stars and discover the truth of his past.</p>"
-                        },
-                        {
-                            "title": "Chapter 2: The Void's Echo",
-                            "content": "<p>His first jump through the void leads him to a derelict space station, where he encounters a strange alien life form. The system warns him of the dangers ahead, but his curiosity pushes him forward. Little does he know, this encounter will change the course of his journey forever.</p>"
-                        }
-                    ]
+                    } catch (error) {
+                        console.error("Firebase auth error:", error);
+                    }
                 }
-            ];
-            
-            // This array holds the IDs of the novels you want to display in the "Most Popular" section
-            const mostPopularNovelIds = [
-                "shattered-innocence",
-                "the-abyss",
-                "kamen-rider",
-                "zongwu-mastermind"
-            ];
-            
-            // This array holds the IDs of the novels for the "Recently Added Chapters" section
-            const recentlyAddedNovelIds = [
-                "douluo-karmas",
-                "after-fifteen-years",
-                "hunyuan-immortal",
-                "infinite-terror",
-                "training-the-heavens",
-                "longevity-in-two-worlds",
-                "another-world",
-                "the-cosmic-wanderer"
-            ];
+            });
+        }
 
+        function getNovelsCollectionRef() {
+            // Store novels in a public collection
+            return collection(db, `artifacts/${appId}/public/data/novels`);
+        }
 
-            const homeView = document.getElementById('home-view');
-            const novelListView = document.getElementById('novel-list-view');
-            const genreView = document.getElementById('genre-view');
-            const novelsContainer = document.querySelector('#most-popular-section .flex-nowrap');
-            const recentChaptersContainer = document.getElementById('recent-chapters-grid');
-            const novelDetailView = document.getElementById('novel-detail-view');
-            const chapterView = document.getElementById('chapter-view');
-            const allNovelsGrid = document.getElementById('all-novels-grid');
-            const genreNovelsGrid = document.getElementById('genre-novels-grid');
-            const genreViewTitle = document.getElementById('genre-view-title');
-
-            function showPage(page) {
-                homeView.classList.add('hidden');
-                novelListView.classList.add('hidden');
-                genreView.classList.add('hidden');
-                novelDetailView.classList.add('hidden');
-                chapterView.classList.add('hidden');
-
-                if (page === 'home') {
-                    homeView.classList.remove('hidden');
-                } else if (page === 'novel-list') {
-                    novelListView.classList.remove('hidden');
+        function startFirestoreListeners() {
+            // Listen for changes to the novels collection
+            const novelsQuery = query(getNovelsCollectionRef());
+            onSnapshot(novelsQuery, (snapshot) => {
+                allNovelsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Novels updated from Firestore:", allNovelsData);
+                renderNovelCards();
+                renderRecentChapters();
+                if (novelListView.classList.contains('hidden') === false) {
                     renderAllNovelCards();
-                } else if (page === 'genre') {
-                    genreView.classList.remove('hidden');
                 }
+            }, (error) => {
+                console.error("Error fetching novels:", error);
+            });
+        }
+        
+        async function getNovelById(novelId) {
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/novels`, novelId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    return { id: docSnap.id, ...docSnap.data() };
+                } else {
+                    console.error("Novel not found:", novelId);
+                    return null;
+                }
+            } catch (error) {
+                console.error("Error getting novel:", error);
+                return null;
             }
+        }
 
-            function getNovelById(id) {
-                return allNovelsData.find(novel => novel.id === id);
+        async function getChaptersForNovel(novelId) {
+            if (chaptersCache[novelId]) {
+                return chaptersCache[novelId];
             }
+            try {
+                const chaptersRef = collection(db, `artifacts/${appId}/public/data/novels/${novelId}/chapters`);
+                const q = query(chaptersRef);
+                const querySnapshot = await getDocs(q);
+                const chapters = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort chapters by some property if needed, e.g., 'chapterNumber'
+                chaptersCache[novelId] = chapters;
+                return chapters;
+            } catch (error) {
+                console.error("Error getting chapters:", error);
+                return [];
+            }
+        }
+        
+        // --- Rendering Functions ---
+        
+        function showNovelDetail(novel) {
+            currentNovelId = novel.id;
+            homeView.classList.add('hidden');
+            novelListView.classList.add('hidden');
+            genreView.classList.add('hidden');
+            novelDetailView.classList.remove('hidden');
+            chapterView.classList.add('hidden');
+
+            document.getElementById('novel-title').textContent = novel.title;
+            document.getElementById('novel-author').textContent = `by ${novel.author}`;
+            document.getElementById('novel-rating').textContent = novel.rating;
+
+            const coverContainer = document.getElementById('novel-cover-container');
+            coverContainer.innerHTML = `<img src="${novel.cover}" alt="${novel.title} Cover" class="rounded-lg shadow-lg">`;
+
+            const genresContainer = document.getElementById('novel-genres');
+            genresContainer.innerHTML = '';
+            novel.genre.forEach(g => {
+                const genreLink = document.createElement('a');
+                genreLink.href = '#';
+                genreLink.textContent = g;
+                genreLink.classList.add('bg-gray-700', 'text-gray-300', 'text-xs', 'font-semibold', 'px-2.5', 'py-0.5', 'rounded-full', 'genres-link', 'hover:text-white');
+                genreLink.setAttribute('data-genre', g);
+                genresContainer.appendChild(genreLink);
+            });
             
-            function showNovelDetail(novel) {
-                homeView.classList.add('hidden');
-                novelListView.classList.add('hidden');
-                genreView.classList.add('hidden');
-                novelDetailView.classList.remove('hidden');
-                chapterView.classList.add('hidden');
-
-                document.getElementById('novel-title').textContent = novel.title;
-                document.getElementById('novel-author').textContent = `by ${novel.author}`;
-                document.getElementById('novel-rating').textContent = novel.rating;
-
-                const coverContainer = document.getElementById('novel-cover-container');
-                coverContainer.innerHTML = `<img src="${novel.cover}" alt="${novel.title} Cover" class="rounded-lg shadow-lg">`;
-
-                const genresContainer = document.getElementById('novel-genres');
-                genresContainer.innerHTML = ''; // Clear existing genres
-                novel.genre.forEach(g => {
-                    const genreLink = document.createElement('a');
-                    genreLink.href = '#';
-                    genreLink.textContent = g;
-                    genreLink.classList.add('bg-gray-700', 'text-gray-300', 'text-xs', 'font-semibold', 'px-2.5', 'py-0.5', 'rounded-full', 'genres-link', 'hover:text-white');
-                    genreLink.setAttribute('data-genre', g);
-                    genresContainer.appendChild(genreLink);
-                });
-
-                const chaptersList = document.getElementById('chapters-list');
+            // Fetch and render chapters
+            const chaptersList = document.getElementById('chapters-list');
+            chaptersList.innerHTML = '<p class="text-gray-500">Loading chapters...</p>';
+            getChaptersForNovel(novel.id).then(chapters => {
                 chaptersList.innerHTML = '';
-                novel.chapters.forEach((chapter) => {
-                    const chapterItem = document.createElement('div');
-                    chapterItem.className = 'bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
-                    chapterItem.innerHTML = `<h4 class="text-xl font-medium">${chapter.title}</h4>`;
-                    chapterItem.addEventListener('click', () => showChapter(novel, chapter));
-                    chaptersList.appendChild(chapterItem);
-                });
+                if (chapters.length > 0) {
+                    chapters.forEach(chapter => {
+                        const chapterItem = document.createElement('div');
+                        chapterItem.className = 'bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
+                        chapterItem.innerHTML = `<h4 class="text-xl font-medium">${chapter.title}</h4>`;
+                        chapterItem.addEventListener('click', () => showChapter(novel, chapter));
+                        chaptersList.appendChild(chapterItem);
+                    });
+                } else {
+                    chaptersList.innerHTML = '<p class="text-gray-500">No chapters found for this novel.</p>';
+                }
+            });
 
-                document.getElementById('back-button').onclick = () => showPage('novel-list');
-            }
+            document.getElementById('back-button').onclick = () => showPage('novel-list');
+        }
 
-            function showChapter(novel, chapter) {
-                novelDetailView.classList.add('hidden');
-                chapterView.classList.remove('hidden');
+        function showChapter(novel, chapter) {
+            novelDetailView.classList.add('hidden');
+            chapterView.classList.remove('hidden');
 
-                document.getElementById('chapter-title').textContent = chapter.title;
-                document.getElementById('chapter-content').innerHTML = chapter.content;
+            document.getElementById('chapter-title').textContent = chapter.title;
+            document.getElementById('chapter-content').innerHTML = chapter.content;
 
-                document.getElementById('back-to-novel-button').onclick = () => showNovelDetail(novel);
-            }
+            document.getElementById('back-to-novel-button').onclick = () => showNovelDetail(novel);
+        }
 
-            function createNovelCard(novel) {
+        function createNovelCard(novel) {
+            const card = document.createElement('div');
+            card.className = 'flex-none w-48 bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 ease-in-out';
+            card.innerHTML = `
+                <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-t-lg">
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-200 truncate">${novel.title}</h3>
+                    <p class="text-gray-400 text-sm mt-1">by ${novel.author}</p>
+                    <div class="flex items-center mt-2">
+                        <span class="text-yellow-400">★</span>
+                        <span class="ml-1 text-gray-300">${novel.rating}</span>
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', () => showNovelDetail(novel));
+            return card;
+        }
+
+        function renderNovelCards() {
+            popularNovelsContainer.innerHTML = '';
+            // For now, we'll just show the first few novels as popular
+            allNovelsData.slice(0, 4).forEach(novel => {
+                const card = createNovelCard(novel);
+                popularNovelsContainer.appendChild(card);
+            });
+        }
+
+        function renderRecentChapters() {
+            recentChaptersContainer.innerHTML = '';
+            // For now, we'll just show the first few novels as recently added
+            allNovelsData.slice(0, 8).forEach(novel => {
                 const card = document.createElement('div');
-                card.className = 'flex-none w-48 bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 ease-in-out';
+                card.className = 'flex flex-row bg-gray-800 rounded-lg shadow-lg overflow-hidden p-2 cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
                 card.innerHTML = `
-                    <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-t-lg">
-                    <div class="p-4">
-                        <h3 class="text-lg font-semibold text-gray-200 truncate">${novel.title}</h3>
-                        <p class="text-gray-400 text-sm mt-1">by ${novel.author}</p>
-                        <div class="flex items-center mt-2">
-                            <span class="text-yellow-400">★</span>
-                            <span class="ml-1 text-gray-300">${novel.rating}</span>
+                    <img src="${novel.cover}" alt="${novel.title} Cover" class="w-16 h-16 rounded-lg mr-4">
+                    <div class="flex flex-col justify-center">
+                        <h4 class="text-lg font-semibold truncate text-gray-200">${novel.title}</h4>
+                        <div class="flex items-center space-x-2 text-gray-400 text-sm mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>9 hours ago</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.483 9.382 5 7.82 5M12 6.253c1.168-.27 2.618-.753 4.18-.753m-4.18 0v13m0-13a9 9 0 100 18A9 9 0 0012 6.253z" />
+                            </svg>
+                            <span>Chapter 1</span>
                         </div>
                     </div>
                 `;
-                card.addEventListener('click', () => showNovelDetail(novel));
-                return card;
-            }
-
-            function renderNovelCards() {
-                novelsContainer.innerHTML = '';
-                const popularNovels = allNovelsData.filter(novel => mostPopularNovelIds.includes(novel.id));
-                popularNovels.forEach(novel => {
-                    const card = createNovelCard(novel);
-                    novelsContainer.appendChild(card);
+                card.addEventListener('click', () => {
+                    const selectedNovel = allNovelsData.find(n => n.id === novel.id);
+                    if (selectedNovel) {
+                        showNovelDetail(selectedNovel);
+                    }
                 });
-            }
+                recentChaptersContainer.appendChild(card);
+            });
+        }
+        
+        function renderAllNovelCards() {
+            allNovelsGrid.innerHTML = ''; // Clear previous cards
+            allNovelsData.forEach(novel => {
+                const card = createNovelCard(novel);
+                // Adjust card width for grid layout
+                card.classList.remove('flex-none', 'w-48');
+                allNovelsGrid.appendChild(card);
+            });
+        }
 
-            function renderRecentChapters() {
-                recentChaptersContainer.innerHTML = '';
-                const recentChapters = allNovelsData.filter(novel => recentlyAddedNovelIds.includes(novel.id));
-                recentChapters.forEach(novel => {
-                    const card = document.createElement('div');
-                    card.className = 'flex flex-row bg-gray-800 rounded-lg shadow-lg overflow-hidden p-2 cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
-                    card.innerHTML = `
-                        <img src="${novel.cover}" alt="${novel.title} Cover" class="w-16 h-16 rounded-lg mr-4">
-                        <div class="flex flex-col justify-center">
-                            <h4 class="text-lg font-semibold truncate text-gray-200">${novel.title}</h4>
-                            <div class="flex items-center space-x-2 text-gray-400 text-sm mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>9 hours ago</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.483 9.382 5 7.82 5M12 6.253c1.168-.27 2.618-.753 4.18-.753m-4.18 0v13m0-13a9 9 0 100 18A9 9 0 0012 6.253z" />
-                                </svg>
-                                <span>Chapter ${novel.chapters[0].title.split(':')[1].trim()}</span>
-                            </div>
-                        </div>
-                    `;
-                    card.addEventListener('click', () => {
-                        const selectedNovel = getNovelById(novel.id);
-                        if (selectedNovel) {
-                            showNovelDetail(selectedNovel);
-                        }
-                    });
-                    recentChaptersContainer.appendChild(card);
-                });
-            }
+        function renderGenreNovels(genre) {
+            genreNovelsGrid.innerHTML = ''; // Clear previous cards
+            const filteredNovels = allNovelsData.filter(novel => novel.genre && novel.genre.includes(genre));
+            genreViewTitle.textContent = `${genre.toUpperCase()} NOVELS`;
             
-            function renderAllNovelCards() {
-                allNovelsGrid.innerHTML = ''; // Clear previous cards
-                allNovelsData.forEach(novel => {
-                    const card = createNovelCard(novel);
-                    // Adjust card width for grid layout
-                    card.classList.remove('flex-none', 'w-48');
-                    allNovelsGrid.appendChild(card);
-                });
-            }
-
-            function renderGenreNovels(genre) {
-                genreNovelsGrid.innerHTML = ''; // Clear previous cards
-                const filteredNovels = allNovelsData.filter(novel => novel.genre.includes(genre));
-                genreViewTitle.textContent = `${genre.toUpperCase()} NOVELS`;
-                
+            if (filteredNovels.length === 0) {
+                genreNovelsGrid.innerHTML = `<p class="text-center text-gray-500 col-span-full">No novels found for this genre.</p>`;
+            } else {
                 filteredNovels.forEach(novel => {
                     const card = createNovelCard(novel);
                     card.classList.remove('flex-none', 'w-48');
                     genreNovelsGrid.appendChild(card);
                 });
             }
+        }
 
-            // Event listener for the novel list link
-            document.getElementById('novel-list-link').addEventListener('click', (e) => {
+        // --- Event Listeners ---
+        
+        // Listen for "Admin" key press to show the admin console
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Admin' || e.key === 'admin') {
+                showPage('admin');
+            }
+        });
+
+        // Handle form submission to add a new novel
+        addNovelForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const novelTitle = document.getElementById('novel-title-input').value;
+            const novelAuthor = document.getElementById('novel-author-input').value;
+            const novelCover = document.getElementById('novel-cover-input').value;
+            const novelRating = parseFloat(document.getElementById('novel-rating-input').value);
+            const novelGenres = document.getElementById('novel-genre-input').value.split(',').map(g => g.trim());
+            const novelChapters = document.getElementById('novel-chapters-input').value;
+
+            let chaptersData;
+            try {
+                chaptersData = JSON.parse(novelChapters);
+                if (!Array.isArray(chaptersData)) {
+                    throw new Error("Chapters must be a JSON array.");
+                }
+            } catch (error) {
+                console.error("Invalid chapters JSON:", error);
+                // In a real app, you'd show a user-facing error message here
+                return;
+            }
+
+            const novelData = {
+                title: novelTitle,
+                author: novelAuthor,
+                cover: novelCover,
+                rating: novelRating,
+                genre: novelGenres
+            };
+            
+            try {
+                const novelsCollection = getNovelsCollectionRef();
+                const newNovelDocRef = await addDoc(novelsCollection, novelData);
+                console.log("Novel added with ID:", newNovelDocRef.id);
+                
+                // Add chapters as a subcollection
+                const chaptersCollection = collection(db, `artifacts/${appId}/public/data/novels/${newNovelDocRef.id}/chapters`);
+                for (const chapter of chaptersData) {
+                    await addDoc(chaptersCollection, chapter);
+                }
+                
+                // Reset form
+                addNovelForm.reset();
+                showPage('home'); // Go back to the main view
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            }
+        });
+        
+        // Event listener for the novel list link
+        document.getElementById('novel-list-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage('novel-list');
+        });
+        document.getElementById('back-to-home-button').addEventListener('click', () => {
+            showPage('home');
+        });
+        document.getElementById('back-to-home-from-genre').addEventListener('click', () => {
+            showPage('home');
+        });
+        
+        // New functionality for click-to-toggle dropdown menu
+        const novelListDropdownButton = document.getElementById('novel-list-dropdown-button');
+        const novelListMenu = document.getElementById('novel-list-menu');
+        
+        novelListDropdownButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
+            novelListMenu.classList.toggle('hidden');
+            // Ensure other menus are closed
+            document.getElementById('genres-menu').classList.add('hidden');
+        });
+        
+        const genresDropdownButton = document.getElementById('genres-dropdown-button');
+        const genresMenu = document.getElementById('genres-menu');
+
+        genresDropdownButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
+            genresMenu.classList.toggle('hidden');
+            // Ensure other menus are closed
+            novelListMenu.classList.add('hidden');
+        });
+        
+        // Delegated event listener for all genre links
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('genres-link')) {
                 e.preventDefault();
-                showPage('novel-list');
-            });
-            document.getElementById('back-to-home-button').addEventListener('click', () => {
-                showPage('home');
-            });
-            document.getElementById('back-to-home-from-genre').addEventListener('click', () => {
-                showPage('home');
-            });
-            
-            // New functionality for click-to-toggle dropdown menu
-            const novelListDropdownButton = document.getElementById('novel-list-dropdown-button');
-            const novelListMenu = document.getElementById('novel-list-menu');
-            
-            novelListDropdownButton.addEventListener('click', (event) => {
-                event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
-                novelListMenu.classList.toggle('hidden');
-                // Ensure other menus are closed
-                document.getElementById('genres-menu').classList.add('hidden');
-            });
-            
-            const genresDropdownButton = document.getElementById('genres-dropdown-button');
-            const genresMenu = document.getElementById('genres-menu');
-
-            genresDropdownButton.addEventListener('click', (event) => {
-                event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
-                genresMenu.classList.toggle('hidden');
-                // Ensure other menus are closed
+                const genre = e.target.getAttribute('data-genre');
+                showPage('genre');
+                renderGenreNovels(genre);
+                // Hide any open dropdown menus
                 novelListMenu.classList.add('hidden');
-            });
-            
-            // Delegated event listener for all genre links
-            document.addEventListener('click', (e) => {
-                if (e.target.classList.contains('genres-link')) {
-                    e.preventDefault();
-                    const genre = e.target.getAttribute('data-genre');
-                    showPage('genre');
-                    renderGenreNovels(genre);
-                    // Hide any open dropdown menus
-                    novelListMenu.classList.add('hidden');
-                    genresMenu.classList.add('hidden');
-                }
-            });
+                genresMenu.classList.add('hidden');
+            }
+        });
 
-            // Close the dropdowns if the user clicks outside of them
-            document.addEventListener('click', (event) => {
-                if (!novelListMenu.contains(event.target) && !novelListDropdownButton.contains(event.target)) {
-                    novelListMenu.classList.add('hidden');
-                }
-                if (!genresMenu.contains(event.target) && !genresDropdownButton.contains(event.target)) {
-                    genresMenu.classList.add('hidden');
-                }
-            });
-
-            // Initial render
-            renderNovelCards();
-            renderRecentChapters();
-        })();
+        // Close the dropdowns if the user clicks outside of them
+        document.addEventListener('click', (event) => {
+            if (!novelListMenu.contains(event.target) && !novelListDropdownButton.contains(event.target)) {
+                novelListMenu.classList.add('hidden');
+            }
+            if (!genresMenu.contains(event.target) && !genresDropdownButton.contains(event.target)) {
+                genresMenu.classList.add('hidden');
+            }
+        });
+        
+    })();
     </script>
 </body>
 </html>
