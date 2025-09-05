@@ -342,10 +342,25 @@
     
     setLogLevel('debug');
 
-    // Global variables from Canvas environment
+    // These variables are injected automatically by the Gemini platform.
+    // When deploying to a different host, you must replace these with your own
+    // Firebase project details and a custom auth token.
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    // TODO: Replace the object below with your Firebase project config
+    // You can find this in your Firebase Console under Project Settings > Your apps
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+      apiKey: "AIzaSyCF90rjrY8X4u9Tdc71a7k6tkCZafUjnqI",
+      authDomain: "web-novels-app.firebaseapp.com",
+      projectId: "web-novels-app",
+      storageBucket: "web-novels-app.firebasestorage.app",
+      messagingSenderId: "279513191583",
+      appId: "1:279513191583:web:17cddfb3b2c02714297eaa"
+    };
+
+    // TODO: Replace "YOUR_INITIAL_AUTH_TOKEN" with a custom token you generate
+    // on your server-side using the Firebase Admin SDK.
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : "YOUR_INITIAL_AUTH_TOKEN";
 
     let app, db, auth, userId;
 
@@ -414,7 +429,8 @@
         });
 
         // --- Firebase Initialization and Authentication ---
-        if (firebaseConfig) {
+        if (firebaseConfig.projectId && firebaseConfig.apiKey) {
+            console.log("Firebase config found. Initializing app.");
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
@@ -426,9 +442,11 @@
                     startFirestoreListeners();
                 } else {
                     try {
-                        if (initialAuthToken) {
+                        if (initialAuthToken && initialAuthToken !== "YOUR_INITIAL_AUTH_TOKEN") {
+                            console.log("Signing in with custom token.");
                             await signInWithCustomToken(auth, initialAuthToken);
                         } else {
+                            console.log("Signing in anonymously.");
                             await signInAnonymously(auth);
                         }
                     } catch (error) {
@@ -436,6 +454,9 @@
                     }
                 }
             });
+        } else {
+            console.error("Firebase configuration is missing. Please check the code and add your Firebase config and auth token.");
+            showMessageBox("Error: Firebase is not configured. Please see the console for instructions on how to set it up.");
         }
 
         function getNovelsCollectionRef() {
