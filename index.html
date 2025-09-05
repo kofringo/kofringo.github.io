@@ -1,1 +1,217 @@
-<h1>anas</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Master Novels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div id="home-view" class="container mx-auto">
+        <header class="text-center my-8">
+            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Zen Master Novels</h1>
+            <p class="mt-2 text-xl text-gray-400">Your portal to adventure, magic, and fantasy.</p>
+        </header>
+
+        <section id="novel-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Novel cards will be injected here by JavaScript -->
+        </section>
+    </div>
+
+    <div id="novel-detail-view" class="container mx-auto hidden">
+        <button id="back-button" class="text-blue-400 hover:text-blue-500 transition duration-300 ease-in-out font-medium mt-4">
+            ← Back to Novels
+        </button>
+        <div class="flex flex-col md:flex-row mt-6">
+            <div id="novel-cover-container" class="md:w-1/3 flex justify-center md:justify-start">
+                <!-- Cover image injected here -->
+            </div>
+            <div class="md:w-2/3 md:pl-8 mt-6 md:mt-0">
+                <h2 id="novel-title" class="text-3xl font-bold text-gray-200"></h2>
+                <p id="novel-author" class="text-lg text-gray-400 mt-2"></p>
+                <div class="flex items-center mt-2">
+                    <span class="text-yellow-400">★</span>
+                    <span id="novel-rating" class="ml-1 text-gray-300"></span>
+                </div>
+                <div id="novel-genres" class="mt-2 flex flex-wrap gap-2">
+                    <!-- Genres injected here -->
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-2xl font-semibold text-gray-200">Chapters</h3>
+                    <div id="chapters-list" class="mt-4 space-y-4">
+                        <!-- Chapters list will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chapter-view" class="container mx-auto hidden">
+        <button id="back-to-novel-button" class="text-blue-400 hover:text-blue-500 transition duration-300 ease-in-out font-medium mt-4">
+            ← Back to Novel
+        </button>
+        <h2 id="chapter-title" class="text-3xl font-bold text-gray-200 mt-6"></h2>
+        <div id="chapter-content" class="mt-6 text-gray-300 leading-relaxed text-lg">
+            <!-- Chapter content injected here -->
+        </div>
+    </div>
+
+    <script>
+        // Use a self-contained IIFE (Immediately Invoked Function Expression)
+        (function() {
+            const novelsData = [
+                {
+                    "id": "shattered-innocence",
+                    "title": "Shattered Innocence",
+                    "author": "Jane Doe",
+                    "cover": "https://placehold.co/200x300/6A0DAD/ffffff?text=Shattered+Innocence",
+                    "rating": 4.2,
+                    "genre": ["Action", "Adventure"],
+                    "chapters": [
+                        {
+                            "title": "Chapter 1: The Beginning",
+                            "content": "<p>Roland had a very mature and beautiful mother. His mother, in turn, had a group of equally mature and alluring girlfriends. Most of these girlfriends had daughters around Roland’s age. So…<br>Concerned that her son was nearing adulthood without ever having been in a relationship, his mother cast a “wicked” gaze upon her girlfriends. She planned a camping trip with the ultimate goal of finding her son a girlfriend. Roland, who had just spent the last three nights on a gaming binge, was forcefully shoved into the minivan.</p><p>The camping trip turned into a massive party, with mothers, girlfriends, and their beautiful daughters all competing to win Roland’s affection.<br>But Roland was not interested in any of them, as he had something far more powerful than love on his mind: The System.<br>After a quick bathroom break in the woods, Roland heard a faint beep from inside his head. “Scanning… Harem Ascension system detected. Loading system…<br>Loading successful. Welcome, host Roland.”</p>"
+                        },
+                        {
+                            "title": "Chapter 2: The Quest",
+                            "content": "<p>Roland’s eyes widened as a blue screen appeared in his vision, complete with buttons and icons that seemed to float in the air. The system’s voice was warm and inviting, but its words sent a shiver down his spine.<br>“To become the ultimate harem king, you must first complete the following quests. Quest 1: Gain the affections of a single woman. Quest 2: Gain the affections of three women.”<br>Roland couldn’t believe his luck. His mother had been trying to get him a girlfriend for years, and now he had a system that would help him do it. But this was no ordinary system. It was the Harem Ascension System, and its ultimate goal was to help him become the most powerful and desired man in the world. With this system, Roland was confident he would be able to conquer any woman he desired.</p>"
+                        }
+                    ]
+                },
+                {
+                    "id": "circle-of-inevitability",
+                    "title": "Circle of Inevitability",
+                    "author": "John Smith",
+                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Circle+of+Inevitability",
+                    "rating": 4.3,
+                    "genre": ["Fantasy", "Action"],
+                    "chapters": [
+                        {
+                            "title": "Chapter 1: The Prophecy",
+                            "content": "<p>In a world where magic and mystery intertwined, a young mage named Elara was born with a unique destiny. The prophecies spoke of a great calamity, and she was the only one who could stop it. Her journey began in the ancient city of Veridian, where she sought to uncover the truth behind the Circle of Inevitability.</p>"
+                        },
+                        {
+                            "title": "Chapter 2: The Guardian",
+                            "content": "<p>Elara’s quest led her to a forbidden forest, where she encountered a fierce guardian. The guardian was a mystical creature with a heart of gold, and after a brief struggle, they became allies. Together, they continued their journey, facing new challenges and discovering ancient secrets.</p>"
+                        }
+                    ]
+                },
+                {
+                    "id": "the-abyss",
+                    "title": "The Abyss",
+                    "author": "Jane Doe",
+                    "cover": "https://placehold.co/200x300/1E90FF/ffffff?text=The+Abyss",
+                    "rating": 5.0,
+                    "genre": ["Magic", "Adventure"],
+                    "chapters": [
+                        {
+                            "title": "Chapter 1: The Descent",
+                            "content": "<p>The world's greatest adventurers knew of the Abyss, a chasm that led to an unknown dimension. It was said to be filled with unimaginable treasures and terrifying monsters. A young adventurer named Kael, driven by a desire for glory and wealth, decided to embark on a journey to the depths of the Abyss.</p>"
+                        }
+                    ]
+                },
+                {
+                    "id": "another-world",
+                    "title": "Another World",
+                    "author": "John Smith",
+                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Another+World",
+                    "rating": 4.5,
+                    "genre": ["Fantasy", "System"],
+                    "chapters": [
+                        {
+                            "title": "Chapter 1: The System",
+                            "content": "<p>Alex, a normal high school student, suddenly found himself in another world. A mysterious voice echoed in his head, telling him he had been chosen by the \"System\". With this system, he could level up, learn new skills, and become the most powerful being in this new world.</p>"
+                        }
+                    ]
+                }
+            ];
+
+            const homeView = document.getElementById('home-view');
+            const novelDetailView = document.getElementById('novel-detail-view');
+            const chapterView = document.getElementById('chapter-view');
+
+            function showHome() {
+                homeView.classList.remove('hidden');
+                novelDetailView.classList.add('hidden');
+                chapterView.classList.add('hidden');
+                renderNovelList();
+            }
+
+            function showNovelDetail(novel) {
+                homeView.classList.add('hidden');
+                novelDetailView.classList.remove('hidden');
+                chapterView.classList.add('hidden');
+
+                document.getElementById('novel-title').textContent = novel.title;
+                document.getElementById('novel-author').textContent = `by ${novel.author}`;
+                document.getElementById('novel-rating').textContent = novel.rating;
+
+                const coverContainer = document.getElementById('novel-cover-container');
+                coverContainer.innerHTML = `<img src="${novel.cover}" alt="${novel.title} Cover" class="rounded-lg shadow-lg">`;
+
+                const genresContainer = document.getElementById('novel-genres');
+                genresContainer.innerHTML = novel.genre.map(g => `<span class="bg-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">${g}</span>`).join('');
+
+                const chaptersList = document.getElementById('chapters-list');
+                chaptersList.innerHTML = '';
+                novel.chapters.forEach((chapter, index) => {
+                    const chapterItem = document.createElement('div');
+                    chapterItem.className = 'bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
+                    chapterItem.innerHTML = `<h4 class="text-xl font-medium">${chapter.title}</h4>`;
+                    chapterItem.addEventListener('click', () => showChapter(novel, chapter));
+                    chaptersList.appendChild(chapterItem);
+                });
+
+                document.getElementById('back-button').onclick = showHome;
+            }
+
+            function showChapter(novel, chapter) {
+                novelDetailView.classList.add('hidden');
+                chapterView.classList.remove('hidden');
+
+                document.getElementById('chapter-title').textContent = chapter.title;
+                document.getElementById('chapter-content').innerHTML = chapter.content;
+
+                document.getElementById('back-to-novel-button').onclick = () => showNovelDetail(novel);
+            }
+
+            function renderNovelList() {
+                const novelListContainer = document.getElementById('novel-list');
+                novelListContainer.innerHTML = '';
+                novelsData.forEach(novel => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 ease-in-out';
+                    card.innerHTML = `
+                        <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-t-lg">
+                        <div class="p-4">
+                            <h3 class="text-xl font-semibold text-gray-200">${novel.title}</h3>
+                            <p class="text-gray-400 mt-1">by ${novel.author}</p>
+                            <div class="flex items-center mt-2">
+                                <span class="text-yellow-400">★</span>
+                                <span class="ml-1 text-gray-300">${novel.rating}</span>
+                            </div>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => showNovelDetail(novel));
+                    novelListContainer.appendChild(card);
+                });
+            }
+
+            // Initial render
+            showHome();
+        })();
+    </script>
+</body>
+</html>
