@@ -358,7 +358,7 @@
                 },
                 {
                     "id": "infinite-terror",
-            "title": "Infinite Terror: This Middle Continent is Rebellious",
+                    "title": "Infinite Terror: This Middle Continent is Rebellious",
                     "author": "Unknown",
                     "cover": "https://placehold.co/200x300/B22222/ffffff?text=Infinite",
                     "rating": 4.3,
@@ -411,8 +411,47 @@
                             "content": "<p>The protagonist's mysterious 'double pupils' are revealed to have a hidden power that could change the fate of both worlds. He must learn to control this new ability while navigating a treacherous path filled with enemies and allies.</p>"
                         }
                     ]
+                },
+                {
+                    "id": "the-cosmic-wanderer",
+                    "title": "The Cosmic Wanderer",
+                    "author": "A.I. Writer",
+                    "cover": "https://placehold.co/200x300/4B0082/ffffff?text=Cosmic+Wanderer",
+                    "rating": 4.8,
+                    "genre": ["Science Fiction", "Adventure", "System"],
+                    "chapters": [
+                        {
+                            "title": "Chapter 1: The First Jump",
+                            "content": "<p>Zane, an orphan from a desolate planet, stumbles upon a sentient relic that grants him the ability to traverse the cosmos. With a system to guide his growth, he embarks on a journey to find his purpose among the stars and discover the truth of his past.</p>"
+                        },
+                        {
+                            "title": "Chapter 2: The Void's Echo",
+                            "content": "<p>His first jump through the void leads him to a derelict space station, where he encounters a strange alien life form. The system warns him of the dangers ahead, but his curiosity pushes him forward. Little does he know, this encounter will change the course of his journey forever.</p>"
+                        }
+                    ]
                 }
             ];
+            
+            // This array holds the IDs of the novels you want to display in the "Most Popular" section
+            const mostPopularNovelIds = [
+                "shattered-innocence",
+                "the-abyss",
+                "kamen-rider",
+                "zongwu-mastermind"
+            ];
+            
+            // This array holds the IDs of the novels for the "Recently Added Chapters" section
+            const recentlyAddedNovelIds = [
+                "douluo-karmas",
+                "after-fifteen-years",
+                "hunyuan-immortal",
+                "infinite-terror",
+                "training-the-heavens",
+                "longevity-in-two-worlds",
+                "another-world",
+                "the-cosmic-wanderer"
+            ];
+
 
             const homeView = document.getElementById('home-view');
             const novelListView = document.getElementById('novel-list-view');
@@ -513,9 +552,8 @@
             }
 
             function renderNovelCards() {
-                // Filter the main data to only show the "Most Popular" novels
-                const popularNovels = allNovelsData.slice(0, 4); // Assuming the first 4 are popular
-                novelsContainer.innerHTML = ''; // Clear existing cards
+                novelsContainer.innerHTML = '';
+                const popularNovels = allNovelsData.filter(novel => mostPopularNovelIds.includes(novel.id));
                 popularNovels.forEach(novel => {
                     const card = createNovelCard(novel);
                     novelsContainer.appendChild(card);
@@ -523,16 +561,15 @@
             }
 
             function renderRecentChapters() {
-                // Filter the main data to only show the "Recently Added Chapters"
-                const recentChapters = allNovelsData.slice(4); // Assuming the rest are recent
-                recentChaptersContainer.innerHTML = ''; // Clear existing cards
-                recentChapters.forEach(chapter => {
+                recentChaptersContainer.innerHTML = '';
+                const recentChapters = allNovelsData.filter(novel => recentlyAddedNovelIds.includes(novel.id));
+                recentChapters.forEach(novel => {
                     const card = document.createElement('div');
                     card.className = 'flex flex-row bg-gray-800 rounded-lg shadow-lg overflow-hidden p-2 cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
                     card.innerHTML = `
-                        <img src="${chapter.cover}" alt="${chapter.title} Cover" class="w-16 h-16 rounded-lg mr-4">
+                        <img src="${novel.cover}" alt="${novel.title} Cover" class="w-16 h-16 rounded-lg mr-4">
                         <div class="flex flex-col justify-center">
-                            <h4 class="text-lg font-semibold truncate text-gray-200">${chapter.title}</h4>
+                            <h4 class="text-lg font-semibold truncate text-gray-200">${novel.title}</h4>
                             <div class="flex items-center space-x-2 text-gray-400 text-sm mt-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -541,14 +578,14 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.483 9.382 5 7.82 5M12 6.253c1.168-.27 2.618-.753 4.18-.753m-4.18 0v13m0-13a9 9 0 100 18A9 9 0 0012 6.253z" />
                                 </svg>
-                                <span>Chapter ${chapter.chapters[0].title.split(':')[1].trim()}</span>
+                                <span>Chapter ${novel.chapters[0].title.split(':')[1].trim()}</span>
                             </div>
                         </div>
                     `;
                     card.addEventListener('click', () => {
-                        const novel = getNovelById(chapter.id);
-                        if (novel) {
-                            showNovelDetail(novel);
+                        const selectedNovel = getNovelById(novel.id);
+                        if (selectedNovel) {
+                            showNovelDetail(selectedNovel);
                         }
                     });
                     recentChaptersContainer.appendChild(card);
@@ -610,14 +647,17 @@
                 novelListMenu.classList.add('hidden');
             });
             
-            // Event listeners for genre links
-            document.querySelectorAll('.genres-link').forEach(link => {
-                link.addEventListener('click', (e) => {
+            // Delegated event listener for all genre links
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('genres-link')) {
                     e.preventDefault();
                     const genre = e.target.getAttribute('data-genre');
                     showPage('genre');
                     renderGenreNovels(genre);
-                });
+                    // Hide any open dropdown menus
+                    novelListMenu.classList.add('hidden');
+                    genresMenu.classList.add('hidden');
+                }
             });
 
             // Close the dropdowns if the user clicks outside of them
