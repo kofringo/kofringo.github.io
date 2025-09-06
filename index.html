@@ -96,7 +96,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
                     </svg>
                 </a>
-                <button class="text-white hover:text-gray-300 hidden md:block">
+                <button id="admin-button" class="text-white hover:text-gray-300 hidden md:block">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -350,13 +350,13 @@
     // You can find your Firebase configuration by going to your Firebase Console,
     // selecting your project, clicking the "gear icon" next to "Project Overview,"
     // then "Project settings," and looking for "Your apps."
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-      apiKey: "AIzaSyCF90rjrY8X4u9Tdc71a7k6tkCZafUjnqI",
-      authDomain: "web-novels-app.firebaseapp.com",
-      projectId: "web-novels-app",
-      storageBucket: "web-novels-app.firebasestorage.app",
-      messagingSenderId: "279513191583",
-      appId: "1:279513191583:web:17cddfb3b2c02714297eaa",
+    const firebaseConfig = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
     };
 
     // The Gemini platform automatically provides a secure auth token.
@@ -431,7 +431,8 @@
         });
 
         // --- Firebase Initialization and Authentication ---
-        if (firebaseConfig.projectId && firebaseConfig.apiKey) {
+        // IMPORTANT: Check if the Firebase config is valid before attempting to initialize.
+        if (firebaseConfig.projectId && firebaseConfig.apiKey !== "YOUR_API_KEY") {
             console.log("Firebase config found. Initializing app.");
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -457,8 +458,8 @@
                 }
             });
         } else {
-            console.error("Firebase configuration is missing. Please check the code and add your Firebase config and auth token.");
-            showMessageBox("Error: Firebase is not configured. Please see the console for instructions on how to set it up.");
+            console.error("Firebase configuration is missing or invalid. Please check the code and add your Firebase config and auth token.");
+            showMessageBox("Error: Firebase is not configured. Please see the console for instructions on how to set it up by replacing the YOUR_API_KEY, YOUR_AUTH_DOMAIN and other placeholders with your own Firebase configuration.");
         }
 
         function getNovelsCollectionRef() {
@@ -509,7 +510,7 @@
                 const querySnapshot = await getDocs(q);
                 const chapters = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 // Sort chapters by some property if needed, e.g., 'chapterNumber'
-                chapters.sort((a, b) => (a.title.localeCompare(b.title)));
+                chapters.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
                 chaptersCache[novelId] = chapters;
                 return chapters;
             } catch (error) {
@@ -533,7 +534,7 @@
             document.getElementById('novel-rating').textContent = novel.rating;
 
             const coverContainer = document.getElementById('novel-cover-container');
-            coverContainer.innerHTML = `<img src="${novel.cover}" alt="${novel.title} Cover" class="rounded-lg shadow-lg">`;
+            coverContainer.innerHTML = `<img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-lg shadow-lg">`;
 
             const genresContainer = document.getElementById('novel-genres');
             genresContainer.innerHTML = '';
@@ -572,275 +573,222 @@
             chapterView.classList.remove('hidden');
 
             document.getElementById('chapter-title').textContent = chapter.title;
-            document.getElementById('chapter-content').innerHTML = chapter.content;
+            document.getElementById('chapter-content').innerHTML = chapter.content.replace(/\n/g, '<br><br>');
 
             document.getElementById('back-to-novel-button').onclick = () => showNovelDetail(novel);
         }
 
-        function createNovelCard(novel) {
+        function createNovelCard(novel, showAuthor = true, isFullWidth = false) {
             const card = document.createElement('div');
-            card.className = 'flex-none w-48 bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 ease-in-out';
-            card.innerHTML = `
-                <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-t-lg">
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold text-gray-200 truncate">${novel.title}</h3>
-                    <p class="text-gray-400 text-sm mt-1">by ${novel.author}</p>
-                    <div class="flex items-center mt-2">
-                        <span class="text-yellow-400">★</span>
-                        <span class="ml-1 text-gray-300">${novel.rating}</span>
+            card.className = `bg-gray-800 rounded-lg shadow-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 ease-in-out ${isFullWidth ? 'flex w-full space-x-4 p-4' : 'flex-none w-48'}`;
+
+            if (isFullWidth) {
+                card.innerHTML = `
+                    <div class="flex-none w-24">
+                        <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-md">
                     </div>
-                </div>
-            `;
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-semibold text-gray-200">${novel.title}</h3>
+                        ${showAuthor ? `<p class="text-sm text-gray-400">by ${novel.author}</p>` : ''}
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">★</span>
+                            <span class="ml-1 text-sm text-gray-300">${novel.rating}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <img src="${novel.cover}" alt="${novel.title} Cover" class="w-full h-auto object-cover rounded-t-lg">
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-200 truncate">${novel.title}</h3>
+                        ${showAuthor ? `<p class="text-sm text-gray-400 truncate">by ${novel.author}</p>` : ''}
+                        <div class="flex items-center mt-2">
+                            <span class="text-yellow-400">★</span>
+                            <span class="ml-1 text-sm text-gray-300">${novel.rating}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
             card.addEventListener('click', () => showNovelDetail(novel));
             return card;
         }
 
         function renderNovelCards() {
+            // Render popular novels
+            const popularNovels = allNovelsData.slice(0, 5); // Take the first 5 as popular
             popularNovelsContainer.innerHTML = '';
-            // For now, we'll just show the first few novels as popular
-            allNovelsData.slice(0, 4).forEach(novel => {
-                const card = createNovelCard(novel);
-                popularNovelsContainer.appendChild(card);
-            });
+            popularNovels.forEach(novel => popularNovelsContainer.appendChild(createNovelCard(novel)));
         }
 
         function renderRecentChapters() {
+            // For a real app, this would be more complex, but we'll simulate by
+            // showing the latest chapters from a few novels.
+            const recentNovels = allNovelsData.sort((a, b) => b.timestamp?.toMillis() - a.timestamp?.toMillis()).slice(0, 3);
             recentChaptersContainer.innerHTML = '';
-            // For now, we'll just show the first few novels as recently added
-            allNovelsData.slice(0, 8).forEach(novel => {
-                const card = document.createElement('div');
-                card.className = 'flex flex-row bg-gray-800 rounded-lg shadow-lg overflow-hidden p-2 cursor-pointer hover:bg-gray-700 transition duration-300 ease-in-out';
-                card.innerHTML = `
-                    <img src="${novel.cover}" alt="${novel.title} Cover" class="w-16 h-16 rounded-lg mr-4">
-                    <div class="flex flex-col justify-center">
-                        <h4 class="text-lg font-semibold truncate text-gray-200">${novel.title}</h4>
-                        <div class="flex items-center space-x-2 text-gray-400 text-sm mt-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>9 hours ago</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.483 9.382 5 7.82 5M12 6.253c1.168-.27 2.618-.753 4.18-.753m-4.18 0v13m0-13a9 9 0 100 18A9 9 0 0012 6.253z" />
-                            </svg>
-                            <span>Chapter 1</span>
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('click', () => {
-                    const selectedNovel = allNovelsData.find(n => n.id === novel.id);
-                    if (selectedNovel) {
-                        showNovelDetail(selectedNovel);
-                    }
-                });
-                recentChaptersContainer.appendChild(card);
-            });
-        }
-        
-        function renderAllNovelCards() {
-            allNovelsGrid.innerHTML = ''; // Clear previous cards
-            allNovelsData.forEach(novel => {
-                const card = createNovelCard(novel);
-                // Adjust card width for grid layout
-                card.classList.remove('flex-none', 'w-48');
-                allNovelsGrid.appendChild(card);
+            if (recentNovels.length === 0) {
+                recentChaptersContainer.innerHTML = '<p class="text-center text-gray-500 col-span-full">No recent chapters yet. Add some from the Admin Console!</p>';
+            }
+            recentNovels.forEach(async novel => {
+                const chapters = await getChaptersForNovel(novel.id);
+                const latestChapter = chapters[chapters.length - 1];
+                if (latestChapter) {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-4 rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 cursor-pointer';
+                    card.innerHTML = `
+                        <h3 class="text-xl font-bold text-white">${latestChapter.title}</h3>
+                        <p class="text-gray-400">from <span class="text-blue-400">${novel.title}</span></p>
+                        <p class="text-gray-500 mt-2 text-sm">by ${novel.author}</p>
+                    `;
+                    card.addEventListener('click', () => showChapter(novel, latestChapter));
+                    recentChaptersContainer.appendChild(card);
+                }
             });
         }
 
-        function renderGenreNovels(genre) {
-            genreNovelsGrid.innerHTML = ''; // Clear previous cards
-            const filteredNovels = allNovelsData.filter(novel => novel.genre && novel.genre.includes(genre));
-            genreViewTitle.textContent = `${genre.toUpperCase()} NOVELS`;
-            
+        function renderAllNovelCards(filteredNovels = allNovelsData) {
+            allNovelsGrid.innerHTML = '';
             if (filteredNovels.length === 0) {
-                genreNovelsGrid.innerHTML = `<p class="text-center text-gray-500 col-span-full">No novels found for this genre.</p>`;
-            } else {
-                filteredNovels.forEach(novel => {
-                    const card = createNovelCard(novel);
-                    card.classList.remove('flex-none', 'w-48');
-                    genreNovelsGrid.appendChild(card);
-                });
+                allNovelsGrid.innerHTML = '<p class="text-center text-gray-500 col-span-full">No novels found in this genre. Add some from the Admin Console!</p>';
             }
+            filteredNovels.forEach(novel => allNovelsGrid.appendChild(createNovelCard(novel, true, true)));
         }
-        
+
         function renderAdminNovelsList() {
             adminNovelsList.innerHTML = '';
             allNovelsData.forEach(novel => {
-                const card = document.createElement('div');
-                card.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex justify-between items-center';
-                card.innerHTML = `
-                    <h4 class="text-lg font-semibold truncate">${novel.title}</h4>
-                    <button class="add-chapter-btn bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition duration-300">
-                        Add Chapter
-                    </button>
-                `;
-                card.querySelector('.add-chapter-btn').addEventListener('click', () => {
-                    showAddChapterForm(novel);
+                const novelItem = document.createElement('div');
+                novelItem.className = 'bg-gray-800 p-4 rounded-lg shadow-lg cursor-pointer hover:bg-gray-700 transition duration-300';
+                novelItem.innerHTML = `<h3 class="text-lg font-bold truncate">${novel.title}</h3>`;
+                novelItem.addEventListener('click', () => {
+                    addChapterFormContainer.classList.remove('hidden');
+                    addChapterSection.classList.add('hidden');
+                    selectedNovelTitle.textContent = novel.title;
+                    selectedNovelId.value = novel.id;
                 });
-                adminNovelsList.appendChild(card);
+                adminNovelsList.appendChild(novelItem);
             });
         }
         
-        function showAddChapterForm(novel) {
-            adminNovelsList.classList.add('hidden');
-            addChapterFormContainer.classList.remove('hidden');
-            selectedNovelTitle.textContent = novel.title;
-            selectedNovelId.value = novel.id;
-        }
-
-
         // --- Event Listeners ---
-        
-        // Listen for "Admin" key press to show the admin console
-        document.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'a' || e.key.toLowerCase() === 'admin') {
-                showPage('admin');
-            }
+
+        document.getElementById('novel-list-dropdown-button').addEventListener('click', () => {
+            document.getElementById('novel-list-menu').classList.toggle('hidden');
         });
-
-        // Handle form submission to add a new novel
-        addNovelForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
-
-            const novelTitle = document.getElementById('novel-title-input').value;
-            const novelAuthor = document.getElementById('novel-author-input').value;
-            const novelCover = document.getElementById('novel-cover-input').value;
-            const novelRating = parseFloat(document.getElementById('novel-rating-input').value);
-            const novelGenres = document.getElementById('novel-genre-input').value.split(',').map(g => g.trim());
-
-            const novelData = {
-                title: novelTitle,
-                author: novelAuthor,
-                cover: novelCover,
-                rating: novelRating,
-                genre: novelGenres
-            };
-            
-            try {
-                const novelsCollection = getNovelsCollectionRef();
-                await addDoc(novelsCollection, novelData);
-                
-                showMessageBox("Novel added successfully!");
-                addNovelForm.reset();
-            } catch (e) {
-                console.error("Error adding novel: ", e);
-                showMessageBox("Failed to add novel. Please try again.");
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Novel';
-            }
+        document.getElementById('genres-dropdown-button').addEventListener('click', () => {
+            document.getElementById('genres-menu').classList.toggle('hidden');
         });
-
-        // Handle form submission to add a new chapter
-        addChapterForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const novelId = document.getElementById('selected-novel-id').value;
-            const chapterTitle = document.getElementById('chapter-title-input').value;
-            const chapterContent = document.getElementById('chapter-content-input').value;
-
-            const chapterData = {
-                title: chapterTitle,
-                content: chapterContent
-            };
-            
-            try {
-                const chaptersCollection = collection(db, `artifacts/${appId}/public/data/novels/${novelId}/chapters`);
-                await addDoc(chaptersCollection, chapterData);
-                
-                showMessageBox("Chapter added successfully!");
-                addChapterForm.reset();
-                
-                // Clear the chapter cache so the detail page re-fetches
-                delete chaptersCache[novelId];
-                
-                // Go back to the admin list after adding a chapter
-                addChapterFormContainer.classList.add('hidden');
-                adminNovelsList.classList.remove('hidden');
-            } catch (e) {
-                console.error("Error adding chapter: ", e);
-                showMessageBox("Failed to add chapter. Please try again.");
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#novel-list-dropdown-button')) {
+                document.getElementById('novel-list-menu').classList.add('hidden');
+            }
+            if (!e.target.closest('#genres-dropdown-button')) {
+                document.getElementById('genres-menu').classList.add('hidden');
             }
         });
         
-        // Tab navigation in Admin Console
-        addNovelTab.addEventListener('click', () => {
-            addNovelSection.classList.remove('hidden');
-            addChapterSection.classList.add('hidden');
-            addNovelTab.classList.add('border-blue-500');
-            addChapterTab.classList.remove('border-blue-500');
-        });
-        
-        addChapterTab.addEventListener('click', () => {
-            addChapterSection.classList.remove('hidden');
-            addNovelSection.classList.add('hidden');
-            addChapterTab.classList.add('border-blue-500');
-            addNovelTab.classList.remove('border-blue-500');
-            renderAdminNovelsList();
-        });
-        
-        backToAdminListBtn.addEventListener('click', () => {
-            addChapterFormContainer.classList.add('hidden');
-            adminNovelsList.classList.remove('hidden');
-        });
-        
-        // Event listener for the novel list link
+        // Admin button
+        document.getElementById('admin-button').addEventListener('click', () => showPage('admin'));
+
+        // Novel list and back buttons
         document.getElementById('novel-list-link').addEventListener('click', (e) => {
             e.preventDefault();
             showPage('novel-list');
         });
-        document.getElementById('back-to-home-button').addEventListener('click', () => {
-            showPage('home');
-        });
-        document.getElementById('back-to-home-from-genre').addEventListener('click', () => {
-            showPage('home');
-        });
+        document.getElementById('back-to-home-button').addEventListener('click', () => showPage('home'));
+        document.getElementById('back-to-home-from-genre').addEventListener('click', () => showPage('home'));
         
-        // New functionality for click-to-toggle dropdown menu
-        const novelListDropdownButton = document.getElementById('novel-list-dropdown-button');
-        const novelListMenu = document.getElementById('novel-list-menu');
-        
-        novelListDropdownButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
-            novelListMenu.classList.toggle('hidden');
-            // Ensure other menus are closed
-            document.getElementById('genres-menu').classList.add('hidden');
-        });
-        
-        const genresDropdownButton = document.getElementById('genres-dropdown-button');
-        const genresMenu = document.getElementById('genres-menu');
-
-        genresDropdownButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevents the document click listener from immediately closing the menu
-            genresMenu.classList.toggle('hidden');
-            // Ensure other menus are closed
-            novelListMenu.classList.add('hidden');
-        });
-        
-        // Delegated event listener for all genre links
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('genres-link')) {
+        // Genre links
+        document.querySelectorAll('.genres-link').forEach(link => {
+            link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const genre = e.target.getAttribute('data-genre');
+                const filteredNovels = allNovelsData.filter(novel => novel.genre.includes(genre));
+                genreViewTitle.textContent = `NOVELS IN "${genre.toUpperCase()}"`;
+                renderAllNovelCards(filteredNovels);
                 showPage('genre');
-                renderGenreNovels(genre);
-                // Hide any open dropdown menus
-                novelListMenu.classList.add('hidden');
-                genresMenu.classList.add('hidden');
-            }
+            });
+        });
+        
+        // Admin tab switching
+        addNovelTab.addEventListener('click', () => {
+            addNovelTab.classList.add('border-blue-500');
+            addChapterTab.classList.remove('border-blue-500');
+            addNovelSection.classList.remove('hidden');
+            addChapterSection.classList.add('hidden');
+        });
+        addChapterTab.addEventListener('click', () => {
+            addChapterTab.classList.add('border-blue-500');
+            addNovelTab.classList.remove('border-blue-500');
+            addChapterSection.classList.remove('hidden');
+            addNovelSection.classList.add('hidden');
+            addChapterFormContainer.classList.add('hidden'); // Hide form when showing list
+            // Ensure the novel list is visible when this tab is clicked
+            renderAdminNovelsList();
+        });
+        
+        // FIX: Added logic to show the chapter section again when going back from the form.
+        backToAdminListBtn.addEventListener('click', () => {
+            addChapterFormContainer.classList.add('hidden');
+            addChapterSection.classList.remove('hidden');
         });
 
-        // Close the dropdowns if the user clicks outside of them
-        document.addEventListener('click', (event) => {
-            if (!novelListMenu.contains(event.target) && !novelListDropdownButton.contains(event.target)) {
-                novelListMenu.classList.add('hidden');
+        // Add novel form submission
+        addNovelForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!db) {
+                showMessageBox("Error: Firebase is not initialized. Please configure your credentials.");
+                return;
             }
-            if (!genresMenu.contains(event.target) && !genresDropdownButton.contains(event.target)) {
-                genresMenu.classList.add('hidden');
+            const novelData = {
+                title: document.getElementById('novel-title-input').value,
+                author: document.getElementById('novel-author-input').value,
+                cover: document.getElementById('novel-cover-input').value,
+                rating: parseFloat(document.getElementById('novel-rating-input').value),
+                genre: document.getElementById('novel-genre-input').value.split(',').map(g => g.trim()),
+                timestamp: new Date()
+            };
+
+            try {
+                const docRef = await addDoc(getNovelsCollectionRef(), novelData);
+                console.log("Novel added with ID:", docRef.id);
+                showMessageBox("Novel added successfully!");
+                addNovelForm.reset();
+            } catch (error) {
+                console.error("Error adding novel:", error);
+                showMessageBox("Error adding novel. Please try again.");
             }
         });
         
+        // Add chapter form submission
+        addChapterForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!db) {
+                showMessageBox("Error: Firebase is not initialized. Please configure your credentials.");
+                return;
+            }
+            const novelId = document.getElementById('selected-novel-id').value;
+            const chapterData = {
+                title: document.getElementById('chapter-title-input').value,
+                content: document.getElementById('chapter-content-input').value,
+                timestamp: new Date()
+            };
+            
+            try {
+                const chaptersRef = collection(db, `artifacts/${appId}/public/data/novels/${novelId}/chapters`);
+                const docRef = await addDoc(chaptersRef, chapterData);
+                console.log("Chapter added with ID:", docRef.id);
+                showMessageBox("Chapter added successfully!");
+                addChapterForm.reset();
+                addChapterFormContainer.classList.add('hidden');
+                addChapterSection.classList.remove('hidden');
+                // Clear the chapters cache to force a refresh on the detail page
+                delete chaptersCache[novelId];
+            } catch (error) {
+                console.error("Error adding chapter:", error);
+                showMessageBox("Error adding chapter. Please try again.");
+            }
+        });
     })();
     </script>
 </body>
