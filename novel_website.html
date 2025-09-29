@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebNovel Reading Platform</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .page-view {
+            display: none;
+        }
+        .novel-card-cover {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            position: relative;
+        }
+        .chapter-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .detail-cover {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 0.75rem;
+        }
+        .novel-list-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 200px;
+            z-index: 20;
+        }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .chapter-content {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 1.125rem;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header / Navigation Bar -->
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <button onclick="window.navigateTo('novel-list-view')" class="text-3xl font-extrabold flex items-center focus:outline-none">
+                        <span class="bg-yellow-500 text-black px-1 rounded-l-md">Web</span>
+                        <span class="text-blue-600">NOVEL</span>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="flex space-x-4 items-center">
+                    
+                    <!-- Novel List Dropdown -->
+                    <div class="relative group">
+                        <button class="text-gray-600 hover:text-blue-600 font-medium py-2 px-3 transition duration-150 flex items-center"
+                                onclick="toggleDropdown(this)">
+                            Novel List 
+                            <svg class="ml-1 w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="novel-list-dropdown" class="novel-list-dropdown hidden bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
+                            <a href="#" onclick="window.navigateTo('novel-list-view'); return false;" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 font-semibold">
+                                All Novels
+                            </a>
+                            <a href="#" onclick="window.navigateTo('latest-novels-view', { filter: 'release' }); return false;" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
+                                Latest Release
+                            </a>
+                            <a href="#" onclick="alert('Most Popular filter functionality not yet implemented.'); return false;" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
+                                Most Popular
+                            </a>
+                            <a href="#" onclick="alert('Your Library functionality not yet implemented.'); return false;" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
+                                Your Library
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- New Novel Submission Link -->
+                    <a href="novel_submission_form.html" 
+                       class="text-green-600 hover:text-green-700 font-bold py-2 px-3 transition duration-150 border-2 border-green-600 rounded-full">
+                        + Submit Novel
+                    </a>
+
+                    <!-- Other Links -->
+                    <a href="#" onclick="alert('Forum functionality not yet implemented.'); return false;" class="text-gray-600 hover:text-blue-600 font-medium py-2 px-3 transition duration-150">
+                        Forum
+                    </a>
+                    <a href="#" onclick="alert('Sign In functionality not yet implemented.'); return false;" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-full hover:bg-blue-700 transition duration-150 shadow-md">
+                        Sign In
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Loading Indicator / Error Message -->
+        <div id="loading-status" class="text-center p-8 bg-white rounded-xl shadow-lg">
+            <p class="text-lg font-medium text-gray-600">Connecting to database and loading novels...</p>
+        </div>
+
+        <!-- 1. NOVEL LIST VIEW (Default View) -->
+        <section id="novel-list-view" class="page-view">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">All Novels</h2>
+            <div id="novel-list-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Novel cards will be rendered here -->
+            </div>
+        </section>
+
+        <!-- 2. LATEST NOVELS VIEW (Filtered View) -->
+        <section id="latest-novels-view" class="page-view">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Latest Release Novels</h2>
+            <div id="latest-novels-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Filtered novel cards will be rendered here -->
+            </div>
+        </section>
+
+        <!-- 3. NOVEL DETAIL VIEW -->
+        <section id="novel-detail-view" class="page-view">
+            <button onclick="window.navigateTo('novel-list-view')" class="text-blue-600 hover:text-blue-800 font-medium mb-6 flex items-center">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Novel List
+            </button>
+
+            <div id="detail-content" class="bg-white rounded-xl shadow-2xl p-6 lg:p-10">
+                <!-- Top Section: Cover, Title, Action Buttons -->
+                <div class="grid md:grid-cols-3 gap-8 mb-8">
+                    <!-- Cover (Col 1) -->
+                    <div class="md:col-span-1">
+                        <img id="detail-cover" class="detail-cover shadow-lg" src="https://placehold.co/400x600/a8a29e/ffffff?text=Loading..." alt="Novel Cover">
+                    </div>
+
+                    <!-- Details and Action Buttons (Col 2 & 3) -->
+                    <div class="md:col-span-2">
+                        <h1 id="detail-title" class="text-4xl font-extrabold text-gray-900 mb-2">Loading Novel Title...</h1>
+                        <p id="detail-author" class="text-lg text-gray-600 mb-4">by <span class="font-semibold">Author Name</span></p>
+                        
+                        <!-- Metadata (Genre, Status, Rating) -->
+                        <div class="flex flex-wrap gap-4 text-sm text-gray-700 mb-6">
+                            <span id="detail-genre" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">Genre: Fantasy</span>
+                            <span id="detail-status" class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Status: Ongoing</span>
+                            <span id="detail-rating" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">Rating: 4.5/5</span>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap gap-4 mb-8">
+                            <button id="btn-read-first" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition duration-150 shadow-lg transform hover:scale-[1.02]">
+                                Read First Chapter
+                            </button>
+                            <button id="btn-add-library" class="px-6 py-3 bg-indigo-500 text-white font-bold rounded-full hover:bg-indigo-600 transition duration-150 shadow-lg">
+                                Add to Library
+                            </button>
+                            <button id="btn-chapter-list" class="px-6 py-3 bg-gray-200 text-gray-800 font-bold rounded-full hover:bg-gray-300 transition duration-150 shadow-md">
+                                Chapter List
+                            </button>
+                        </div>
+                        
+                        <!-- Chapter List Display Area -->
+                        <div id="chapter-list-container" class="mt-6 border p-4 rounded-lg bg-gray-50 hidden">
+                             <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800">Chapters</h3>
+                                <button id="btn-create-chapter" class="px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition">
+                                    + Add New Chapter
+                                </button>
+                            </div>
+                            <div id="chapters-list" class="space-y-2">
+                                <p class="text-gray-500 italic">Loading chapters...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Section -->
+                <div class="border-t pt-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Summary</h2>
+                    <p id="detail-summary" class="text-gray-700 whitespace-pre-wrap leading-relaxed">Loading novel summary...</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 4. CHAPTER CREATION VIEW -->
+        <section id="chapter-creation-view" class="page-view">
+             <button id="back-to-detail-btn" onclick="" class="text-blue-600 hover:text-blue-800 font-medium mb-6 flex items-center">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Novel Details
+            </button>
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl border border-gray-100 max-w-4xl mx-auto">
+                <h2 id="chapter-creation-title" class="text-3xl font-bold mb-6 text-gray-800 border-b pb-3">Create Chapter for: [Novel Title]</h2>
+                <form id="chapterForm" onsubmit="event.preventDefault(); addNewChapter();">
+                    
+                    <!-- Chapter Title Input -->
+                    <div class="mb-4">
+                        <label for="chapterTitle" class="block text-sm font-medium text-gray-700 mb-1">Chapter Title</label>
+                        <input type="text" id="chapterTitle" name="chapterTitle" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150"
+                               placeholder="e.g., Chapter 1: The Beginning of the Journey">
+                    </div>
+
+                    <!-- Chapter Content Textarea -->
+                    <div class="mb-6">
+                        <label for="chapterContent" class="block text-sm font-medium text-gray-700 mb-1">Chapter Content</label>
+                        <textarea id="chapterContent" name="chapterContent" rows="15" required
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150 resize-y"
+                                  placeholder="Start writing your novel content here."></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitChapterButton"
+                            class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200 ease-in-out shadow-lg transform hover:scale-[1.01]">
+                        Save Chapter
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 5. CHAPTER READING VIEW -->
+        <section id="chapter-reading-view" class="page-view max-w-3xl mx-auto">
+             <button id="back-to-detail-from-read-btn" onclick="" class="text-blue-600 hover:text-blue-800 font-medium mb-6 flex items-center">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Novel Details
+            </button>
+
+            <article class="bg-white p-6 md:p-10 rounded-xl shadow-2xl">
+                <h1 id="read-novel-title" class="text-xl text-gray-500 font-medium mb-1"></h1>
+                <h2 id="read-chapter-title" class="text-4xl font-extrabold text-gray-900 mb-6 border-b pb-3">Chapter Title</h2>
+                <div id="read-chapter-content" class="chapter-content text-lg">
+                    <!-- Chapter text goes here -->
+                </div>
+            </article>
+
+            <!-- Chapter Navigation (Simulated) -->
+            <div class="flex justify-between mt-8">
+                <button class="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition" onclick="alert('Previous Chapter functionality not implemented.')">
+                    &larr; Previous
+                </button>
+                <button class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition" onclick="alert('Next Chapter functionality not implemented.')">
+                    Next &rarr;
+                </button>
+            </div>
+        </section>
+
+    </main>
+    
+    <!-- Custom Modal HTML for full summary/errors -->
+    <div id="customModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform scale-100 transition-transform duration-300">
+            <div class="flex justify-between items-start border-b pb-3 mb-4">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800">Details</h3>
+                <button onclick="window.closeModal()" class="text-gray-500 hover:text-gray-900 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <p id="modalBody" class="text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto"></p>
+            <div class="mt-6 flex justify-end">
+                <button onclick="window.closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-150">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, serverTimestamp, setLogLevel, addDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Setup (Mandatory Canvas Setup) ---
+        // NOTE: When running on a GitHub Pages site, the __app_id, __firebase_config, and __initial_auth_token 
+        // will not be automatically defined. You will need to manually provide these values 
+        // if you want the Firestore features to work outside of the secure Canvas environment.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'webnovel-platform';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // Placeholder/Sample Firebase Config - REPLACE WITH YOUR OWN CONFIG
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID,
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = 'anonymous'; 
+        let novelsCache = [];
+
+        // Firestore Collection Path (must match the form submission app)
+        // NOTE: This path is set for the canvas environment. For external use, simplify the path 
+        // (e.g., to just 'novels' if security rules allow).
+        const NOVELS_COLLECTION_PATH = `/artifacts/${appId}/public/data/novels`;
+        const PLACEHOLDER_IMAGE = "https://placehold.co/400x600/a8a29e/ffffff?text=Image+Load+Error";
+        
+        // --- Utility Functions (Modal) ---
+        window.viewModal = function(title, content) {
+            const modal = document.getElementById('customModal');
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = content;
+            modal.classList.remove('hidden');
+        }
+
+        window.closeModal = function() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+
+        function toggleDropdown(button) {
+            const dropdown = document.getElementById('novel-list-dropdown');
+            dropdown.classList.toggle('hidden');
+            // Hide if clicking anywhere else
+            document.addEventListener('click', function handler(event) {
+                if (!button.parentNode.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                    document.removeEventListener('click', handler);
+                }
+            });
+        }
+        window.toggleDropdown = toggleDropdown; // Expose to global scope for button click
+
+        // --- Navigation/Routing ---
+        const views = {
+            'novel-list-view': document.getElementById('novel-list-view'),
+            'latest-novels-view': document.getElementById('latest-novels-view'),
+            'novel-detail-view': document.getElementById('novel-detail-view'),
+            'chapter-creation-view': document.getElementById('chapter-creation-view'),
+            'chapter-reading-view': document.getElementById('chapter-reading-view'),
+        };
+        let currentView = 'novel-list-view';
+        let activeNovelId = null;
+
+        window.navigateTo = function(viewName, params = {}) {
+            Object.values(views).forEach(view => view.style.display = 'none');
+            
+            const viewToShow = views[viewName];
+            if (viewToShow) {
+                viewToShow.style.display = 'block';
+                currentView = viewName;
+            }
+
+            if (viewName === 'novel-detail-view' && params.novelId) {
+                activeNovelId = params.novelId;
+                renderNovelDetail(params.novelId);
+            } else if (viewName === 'latest-novels-view') {
+                renderFilteredNovels(novelsCache);
+            } else if (viewName === 'chapter-creation-view' && params.novelId) {
+                activeNovelId = params.novelId;
+                renderChapterCreation(params.novelId);
+            } else if (viewName === 'chapter-reading-view' && params.novelId && params.chapterId) {
+                activeNovelId = params.novelId;
+                renderChapterReading(params.novelId, params.chapterId);
+            }
+        };
+
+        // --- Data Fetching and Rendering ---
+
+        async function initFirebase() {
+            try {
+                // setLogLevel('Debug'); // Enable Firestore logging for debugging
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await setPersistence(auth, browserLocalPersistence);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        setupRealtimeNovelListener();
+                    } else {
+                        // Attempt to proceed anonymously if token fails
+                        setupRealtimeNovelListener(); 
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                viewModal("System Error", `Failed to initialize Firebase. Please check the console and ensure your Firebase config is correct. Error: ${error.message}`);
+            }
+        }
+
+        function setupRealtimeNovelListener() {
+            // Check if db is initialized before trying to set up listener
+            if (!db) {
+                document.getElementById('loading-status').innerHTML = '<p class="text-lg font-medium text-red-600">Database connection failed. Please check Firebase configuration.</p>';
+                return;
+            }
+            
+            const novelsRef = collection(db, NOVELS_COLLECTION_PATH);
+            const q = query(novelsRef);
+
+            onSnapshot(q, (snapshot) => {
+                novelsCache = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    novelsCache.push({ id: doc.id, ...data });
+                });
+
+                // Initial sort by creation time (newest first)
+                novelsCache.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+
+                document.getElementById('loading-status').style.display = 'none';
+
+                // Re-render the current view to reflect updates
+                if (currentView === 'novel-list-view') {
+                    renderNovelList(novelsCache);
+                } else if (currentView === 'latest-novels-view') {
+                    renderFilteredNovels(novelsCache);
+                }
+                
+                // If on detail view, try to update if the data changed
+                if(activeNovelId && currentView === 'novel-detail-view') {
+                    renderNovelDetail(activeNovelId, false);
+                }
+
+                // Ensure the default view is shown once data is loaded
+                if (currentView === 'novel-list-view' || novelsCache.length === 0) {
+                     window.navigateTo('novel-list-view');
+                } else if (novelsCache.length === 0) {
+                     document.getElementById('novel-list-view').style.display = 'block';
+                     document.getElementById('novel-list-grid').innerHTML = '<p class="col-span-full text-center text-gray-500 italic">No novels found. Please use the Add Novel form to submit the first one!</p>';
+                }
+            }, (error) => {
+                console.error("Error fetching novels:", error);
+                viewModal("Database Error", "Failed to load novels in real-time. Check console for details.");
+            });
+        }
+        
+        /**
+         * Renders the main novel grid view.
+         */
+        function renderNovelList(novels) {
+            const container = document.getElementById('novel-list-grid');
+            container.innerHTML = '';
+            
+            if (novels.length === 0) {
+                container.innerHTML = '<p class="col-span-full text-center text-gray-500 italic">No novels found. Please use the Add Novel form to submit the first one!</p>';
+                return;
+            }
+
+            // Simple randomization to show a mix on the main page
+            const shuffledNovels = [...novels].sort(() => 0.5 - Math.random());
+            
+            shuffledNovels.forEach(novel => {
+                container.insertAdjacentHTML('beforeend', createNovelCardHTML(novel));
+            });
+        }
+
+        /**
+         * Renders the filtered (Latest Release) view.
+         */
+        function renderFilteredNovels(novels) {
+            const container = document.getElementById('latest-novels-grid');
+            container.innerHTML = '';
+            
+            // The novelsCache is already sorted by createdAt (newest first)
+            novels.forEach(novel => {
+                container.insertAdjacentHTML('beforeend', createNovelCardHTML(novel));
+            });
+        }
+
+        /**
+         * Creates the HTML structure for a single novel card.
+         */
+        function createNovelCardHTML(novel) {
+            const chapterCount = Math.max(1, Math.floor(Math.random() * 500)); // Simulated chapter count
+            const truncatedSummary = novel.summary.substring(0, 100) + (novel.summary.length > 100 ? '...' : '');
+            const truncatedAuthorId = novel.authorId ? `${novel.authorId.substring(0, 8)}...` : 'Unknown';
+
+            return `
+                <div onclick="window.navigateTo('novel-detail-view', { novelId: '${novel.id}' })"
+                     class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100 cursor-pointer flex flex-col">
+                    
+                    <!-- Cover and Badge -->
+                    <div class="novel-card-cover overflow-hidden relative">
+                        <img src="${novel.imageURL}" alt="${novel.title} Cover" 
+                             class="w-full h-full object-cover"
+                             onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+                        <div class="chapter-badge">${chapterCount} Chs</div>
+                    </div>
+                    
+                    <div class="p-4 flex-grow flex flex-col">
+                        <!-- Title -->
+                        <h4 class="text-xl font-bold text-gray-900 truncate mb-1">${novel.title}</h4>
+                        <!-- Author -->
+                        <p class="text-xs text-gray-500 mb-2">Author ID: ${truncatedAuthorId}</p>
+                        <!-- Summary -->
+                        <p class="text-gray-600 text-sm line-clamp-3 mb-3 flex-grow">${truncatedSummary}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- Novel Detail and Chapter Logic ---
+
+        function setupRealtimeChapterListener(novelId, novelTitle) {
+            if (!db) return; // Guard against uninitialized db
+            
+            const chaptersRef = collection(db, NOVELS_COLLECTION_PATH, novelId, 'chapters');
+            // Query chapters and sort by creation time
+            const q = query(chaptersRef); 
+
+            // Returns an unsubscribe function if needed, but here we just set it up
+            return onSnapshot(q, (snapshot) => {
+                const chapters = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    chapters.push({ id: doc.id, ...data });
+                });
+
+                // Sort by createdAt (newest first) or chapter number (simulated by creation time)
+                chapters.sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
+
+                renderChapterList(novelId, novelTitle, chapters);
+            }, (error) => {
+                console.error("Error fetching chapters:", error);
+                document.getElementById('chapters-list').innerHTML = `<p class="text-red-500">Failed to load chapters: ${error.message}</p>`;
+            });
+        }
+
+        function renderChapterList(novelId, novelTitle, chapters) {
+            const listElement = document.getElementById('chapters-list');
+            listElement.innerHTML = '';
+            
+            if (chapters.length === 0) {
+                 listElement.innerHTML = `<p class="text-gray-500 italic">No chapters published yet. Be the first to add one!</p>`;
+                 document.getElementById('btn-read-first').disabled = true;
+            } else {
+                 document.getElementById('btn-read-first').disabled = false;
+                 // Update Read First Chapter button to link to the first chapter
+                 const firstChapter = chapters[0];
+                 document.getElementById('btn-read-first').onclick = () => window.navigateTo('chapter-reading-view', { novelId: novelId, chapterId: firstChapter.id, novelTitle: novelTitle });
+
+                chapters.forEach((chapter, index) => {
+                    const chapterNumber = index + 1;
+                    const itemHTML = `
+                        <div class="flex justify-between items-center p-3 bg-white rounded-lg border hover:bg-gray-100 transition duration-150">
+                            <span class="font-medium text-gray-800 truncate">Chapter ${chapterNumber}: ${chapter.title}</span>
+                            <button onclick="window.navigateTo('chapter-reading-view', { novelId: '${novelId}', chapterId: '${chapter.id}', novelTitle: '${novelTitle}' })"
+                                    class="text-sm text-blue-600 hover:text-blue-800 font-semibold ml-4">
+                                Read &rarr;
+                            </button>
+                        </div>
+                    `;
+                    listElement.insertAdjacentHTML('beforeend', itemHTML);
+                });
+            }
+        }
+
+        /**
+         * Renders the Novel Detail View.
+         */
+        function renderNovelDetail(novelId) {
+            const novel = novelsCache.find(n => n.id === novelId);
+
+            if (!novel) {
+                window.navigateTo('novel-list-view');
+                return;
+            }
+
+            // Setup Realtime Chapter Listener for this specific novel
+            setupRealtimeChapterListener(novelId, novel.title);
+
+            // Populate Detail View
+            document.getElementById('detail-title').textContent = novel.title;
+            document.getElementById('detail-author').innerHTML = `by <span class="font-semibold">${novel.authorId ? `ID: ${novel.authorId.substring(0, 8)}...` : 'Unknown Author'}</span>`;
+            document.getElementById('detail-cover').src = novel.imageURL;
+            document.getElementById('detail-cover').onerror = function() { this.onerror=null; this.src=PLACEHOLDER_IMAGE; };
+            document.getElementById('detail-summary').textContent = novel.summary;
+            document.getElementById('detail-genre').textContent = `Genre: Unknown`; 
+            document.getElementById('detail-status').textContent = `Status: Ongoing`; 
+            document.getElementById('detail-rating').textContent = `Rating: 4.5/5`; 
+
+            // Chapter List Button Toggle
+            const chapterListContainer = document.getElementById('chapter-list-container');
+            const chapterListButton = document.getElementById('btn-chapter-list');
+            chapterListButton.onclick = () => chapterListContainer.classList.toggle('hidden');
+
+            // Button to navigate to Chapter Creation Form
+            document.getElementById('btn-create-chapter').onclick = () => window.navigateTo('chapter-creation-view', { novelId: novelId });
+            document.getElementById('back-to-detail-btn').onclick = () => window.navigateTo('novel-detail-view', { novelId: novelId });
+            document.getElementById('back-to-detail-from-read-btn').onclick = () => window.navigateTo('novel-detail-view', { novelId: novelId });
+        }
+
+        /**
+         * Renders the Chapter Creation Form.
+         */
+        function renderChapterCreation(novelId) {
+            const novel = novelsCache.find(n => n.id === novelId);
+            if (!novel) {
+                 window.navigateTo('novel-list-view');
+                 return;
+            }
+            document.getElementById('chapter-creation-title').textContent = `Create Chapter for: ${novel.title}`;
+            document.getElementById('back-to-detail-btn').onclick = () => window.navigateTo('novel-detail-view', { novelId: novelId });
+        }
+        
+        /**
+         * Saves the new chapter to the novel's subcollection in Firestore.
+         */
+        window.addNewChapter = async function() {
+            if (!db || !activeNovelId) {
+                window.viewModal("Submission Error", "Database not initialized or novel context is missing.");
+                return;
+            }
+
+            const chapterTitle = document.getElementById('chapterTitle').value.trim();
+            const chapterContent = document.getElementById('chapterContent').value.trim();
+
+            if (!chapterTitle || !chapterContent) {
+                window.viewModal('Submission Error', 'Please fill in both the Chapter Title and Content.');
+                return;
+            }
+
+            const chapterData = {
+                title: chapterTitle,
+                content: chapterContent,
+                authorId: userId,
+                createdAt: serverTimestamp()
+            };
+
+            const submitButton = document.getElementById('submitChapterButton');
+            submitButton.disabled = true;
+            const originalText = submitButton.textContent;
+            submitButton.textContent = 'Saving Chapter...';
+
+            try {
+                // Get the specific novel document reference
+                const novelDocRef = doc(db, NOVELS_COLLECTION_PATH, activeNovelId);
+                // Get the chapters subcollection reference
+                const chaptersColRef = collection(novelDocRef, 'chapters');
+                
+                await addDoc(chaptersColRef, chapterData);
+
+                // Success feedback and form reset
+                document.getElementById('chapterForm').reset();
+                window.viewModal("Success!", "Chapter saved successfully. You will be redirected to the novel details page.");
+                
+                setTimeout(() => {
+                    window.navigateTo('novel-detail-view', { novelId: activeNovelId });
+                }, 1500);
+
+            } catch (e) {
+                console.error("Error adding chapter: ", e);
+                window.viewModal("Submission Error", `Failed to save chapter: ${e.message}`);
+                submitButton.textContent = originalText;
+                submitButton.disabled = false;
+            }
+        }
+
+        /**
+         * Renders the chapter reading page.
+         */
+        function renderChapterReading(novelId, chapterId) {
+            const novel = novelsCache.find(n => n.id === novelId);
+            if (!novel) {
+                 window.navigateTo('novel-list-view');
+                 return;
+            }
+
+            // Set the back button correctly
+            document.getElementById('back-to-detail-from-read-btn').onclick = () => window.navigateTo('novel-detail-view', { novelId: novelId });
+
+            // Fetch chapter content
+            if (!db) return;
+            const chaptersRef = collection(db, NOVELS_COLLECTION_PATH, novelId, 'chapters');
+            const q = query(chaptersRef); 
+
+            // Use onSnapshot to listen for all chapters, then find the specific one.
+            onSnapshot(q, (snapshot) => {
+                const chapterDoc = snapshot.docs.find(doc => doc.id === chapterId);
+
+                document.getElementById('read-novel-title').textContent = novel.title;
+
+                if (chapterDoc) {
+                    const chapter = chapterDoc.data();
+                    document.getElementById('read-chapter-title').textContent = chapter.title;
+                    document.getElementById('read-chapter-content').textContent = chapter.content;
+                } else {
+                    document.getElementById('read-chapter-title').textContent = "Chapter Not Found";
+                    document.getElementById('read-chapter-content').textContent = "We could not locate this chapter in the database.";
+                }
+            }, (error) => {
+                console.error("Error fetching chapter content:", error);
+                document.getElementById('read-chapter-title').textContent = "Error Loading";
+                document.getElementById('read-chapter-content').textContent = `Failed to load chapter content: ${error.message}`;
+            });
+        }
+
+        // --- Initialization ---
+        window.onload = function() {
+            initFirebase();
+            window.navigateTo('novel-list-view'); // Start on the novel list page
+        };
+    </script>
+</body>
+</html>
